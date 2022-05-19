@@ -11,15 +11,13 @@
 
 typedef struct _CacheLine {
     int size;
-    int count;
     char *body;
 } CacheLine;
 
-CacheLine make_cache_line(int size, int count) {
+CacheLine make_cache_line(int size) {
     CacheLine cache_line;
     cache_line.size = size;
-    cache_line.count = count;
-    cache_line.body = (char *)malloc(size * count);
+    cache_line.body = (char *)malloc(size);
     return cache_line;
 }
 

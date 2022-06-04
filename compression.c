@@ -1,16 +1,42 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "compression.h"
 
-
-CacheLine base_plus_delta(CacheLine original) {
-    CacheLine compressed = make_cache_line(original.size);
-    return compressed;
+CompressionResult base_plus_delta(CacheLine original) {
+    CompressionResult result;
 }
 
+CompressionResult base_delta_immediate(CacheLine original) {
 
-int main(int argc, char *argv[]) {
-    CacheLine original;
-    original.size = BYTESIZ;
-    printf("original: size(%d) count(%d)", original.size);
+}
+
+CompressionResult bdi_compressing_unit(CacheLine original, int k, int d) {
+    void *splitted;
+
+    switch (k) {
+        case 8:
+            splitted = (signed long int *)original;
+            break;
+        
+        case 4:
+            splitted = (signed int *)original;
+            break;
+
+        case 2:
+            splitted = (signed short *)original;
+            break;
+        
+        default:
+            break;
+    }
+        
+
+}
+
+int main(int argc, char const *argv[]) {
+    CacheLine original = (CacheLine)malloc(CACHE64SIZ);
+    memset(original, 0, CACHE64SIZ);
+    original[1] = 1;
+    printf("size: %d\n", sizeof(original));
+    printf("size: %d\n", CACHE64SIZ);
+
+    return 0;
 }

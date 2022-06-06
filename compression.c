@@ -32,6 +32,7 @@ ValueBuffer get_value_bitwise(ByteArr arr, int offset, int size) {
     return val;
 }
 
+
 // Functions for managing MemoryChunk
 MemoryChunk make_memory_chunk(int size, int initial) {
     MemoryChunk result;
@@ -94,9 +95,16 @@ void print_compression_result(CompressionResult result) {
     printf("===================================\n");
 }
 
-CompressionResult base_plus_delta(CacheLine original) {
-    CompressionResult result;
-}
+
+/* 
+ * Functions for BDI algorithm
+ *   base_delta_immediate: BDI algorithm
+ *   bdi_compressing_unit: actually compresses given cacheline with certain encoding
+ * 
+ * Note
+ *   This code snippet is written with its reference to the paper from PACT12 conference
+ *   url: https://users.ece.cmu.edu/~omutlu/pub/bdi-compression_pact12.pdf
+ */
 
 CompressionResult base_delta_immediate(CacheLine original) {
     CompressionResult result;

@@ -60,8 +60,7 @@ void print_memory_chunk(MemoryChunk chunk);
 void print_memory_chunk_bitwise(MemoryChunk chunk);
 void print_compression_result(CompressionResult result);
 
-// Functions for BDI algorithms related functions
-CompressionResult base_plus_delta(CacheLine original);             // Base + delta algotithm 
+// Functions for BDI algorithm
 CompressionResult base_delta_immediate(CacheLine original);        // BDI algorithm
 CacheLine bdi_compressing_unit(CacheLine original, int encoding);  // Compressing Unit (CU)
 

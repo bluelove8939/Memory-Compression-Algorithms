@@ -39,6 +39,7 @@ typedef MemoryChunk CacheLine;
 typedef MemoryChunk MetaData;
 
 typedef struct {
+    char *compression_type;
     CacheLine original;
     CacheLine compressed;
     Bool is_compressed;
@@ -46,6 +47,7 @@ typedef struct {
 } CompressionResult;
 
 typedef struct {
+    char *compression_type;
     CacheLine original;
     CacheLine compressed;
     Bool is_decompressed;

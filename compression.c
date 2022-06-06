@@ -1,20 +1,36 @@
 #include "compression.h"
 
-CacheLine base_plus_delta(CacheLine original) {
+CompressionResult base_plus_delta(CacheLine original) {
     CompressionResult result;
 }
 
-CacheLine base_delta_immediate(CacheLine original) {
+CompressionResult base_delta_immediate(CacheLine original) {
     CompressionResult result;
+    MetaData tag_overhead = make_memory_chunk(2, 0);  // 2Bytes of tag overhead with its valid bitwidth of 11bits
     CacheLine compressed;
+
+    result.original = original;
 
     for (int encoding = 0; encoding < 8; encoding++) {
         compressed = bdi_compressing_unit(original, encoding);
         if (compressed.size < original.size) {
             result.compressed = compressed;
             result.is_compressed = TRUE;
+            set_value_bitwise(tag_overhead.body, encoding, 0, 4);             // encoding        (0-3 bits)
+            set_value_bitwise(tag_overhead.body, compressed.size / 8, 4, 7);  // segment pointer (4-11bits)
+            tag_overhead.valid_bitwidth = 11;   // tag_overhead = {encoding(4bits), segment_pointer(7bits)}
+            result.tag_overhead = tag_overhead;
+            return result;
         }
     }
+
+    result.compressed = copy_memory_chunk(original);
+    result.is_compressed = FALSE;
+    set_value_bitwise(tag_overhead.body, 15, 0, 4);
+    set_value_bitwise(tag_overhead.body, compressed.size / 8, 4, 7);
+    tag_overhead.valid_bitwidth = 11;
+    result.tag_overhead = tag_overhead;
+    return result;
 }
 
 CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
@@ -28,23 +44,47 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
     // 0. Select mode by given encoding (MUX)
     switch (encoding) {
     case 0:  // Zero values
+#ifdef VERBOSE
+        printf("Zeros compression (encoding: %d)\n", encoding);
+#endif
         for (int i = 0; i < original.size; i++) {
+#ifdef VERBOSE
+            printf("[ITER %2d] base: 0x%016x  buffer: 0x%016x\n", i, 0, original.body[i]);
+#endif
             if (original.body[i] != 0) {
+#ifdef VERBOSE
+                printf("iteration terminated (not compressible)\n");
+#endif
                 result = copy_memory_chunk(original);
                 return result;
             }
         }
+#ifdef VERBOSE
+        printf("compression completed\n");
+#endif
         result = make_memory_chunk(1, 0);
         return result;
     
-    case 1:  // Repeating values
+    case 1:  // Repeated values
+#ifdef VERBOSE
+        printf("Repeated values compression (encoding: %d)\n", encoding);
+#endif
         base = get_value(original.body, 0, 8);
         for (int i = 0; i < original.size; i += 8) {
+#ifdef VERBOSE
+            printf("[ITER %2d] base: 0x%016x  buffer: 0x%016x\n", i, base, get_value(original.body, i, 8));
+#endif
             if (get_value(original.body, i, 8) != base) {
+#ifdef VERBOSE
+                printf("iteration terminated (not compressible)\n");
+#endif
                 result = copy_memory_chunk(original);
                 return result;
             }
         }
+#ifdef VERBOSE
+        printf("compression completed\n");
+#endif
         result = make_memory_chunk(8, 0);
         set_value(result.body, base, 0, 8);
         return result;
@@ -85,6 +125,9 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
         break;
     }
 
+#ifdef VERBOSE
+    printf("Base%d-Delta%d compression (encoding: %d)\n", k, d, encoding);
+#endif
     result = make_memory_chunk(original.size, 0);
 
     // 1. Find out base value
@@ -97,7 +140,10 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
         // 2-1. Split byte array into k-byte array and extract each value
         buffer = get_value(original.body, i, k);
         delta = buffer - base;
-        printf("[ITER %2d] base: %08x  buffer: %08x  delta: %08x\n", i/k, base, buffer, delta);
+
+#ifdef VERBOSE
+        printf("[ITER %2d] base: 0x%016x  buffer: 0x%016x  delta: 0x%016x\n", i/k, base, buffer, delta);
+#endif
 
         // 2-2. Check whether calculated delta value is sign-extended within d-Bytes
         mask = 1;
@@ -112,7 +158,9 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
 
         // 2-3 Copy shrinked delta value to compressed memory block
         if (flag == FALSE) {
+#ifdef VERBOSE
             printf("iteration terminated (not compressible)\n");
+#endif
             remove_memory_chunk(result);
             result = copy_memory_chunk(original);
             return result;
@@ -123,6 +171,10 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
         }
     }
 
+#ifdef VERBOSE
+    printf("compression completed\n");
+#endif
+
     result.size = compressed_siz;
     return result;
 }
@@ -130,13 +182,19 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
 int main(int argc, char const *argv[]) {
     CacheLine original = make_memory_chunk(CACHE64SIZ, 0);
     *(original.body+1) = 36;
+    printf("original: ");
     print_memory_chunk(original);
+    printf("\n");
     
-    int encoding = 3;
-    CacheLine compressed = bdi_compressing_unit(original, encoding);
-    print_memory_chunk(compressed);
+    // int encoding = 3;
+    // CacheLine compressed = bdi_compressing_unit(original, encoding);
+    // print_memory_chunk(compressed);
+    // print_memory_chunk_bitwise(compressed);
+    // remove_memory_chunk(compressed);
 
-    remove_memory_chunk(compressed);
+    CompressionResult result = base_delta_immediate(original);
+    print_compression_result(result);
+    remove_compression_result(result);
     remove_memory_chunk(original);
 
     return 0;

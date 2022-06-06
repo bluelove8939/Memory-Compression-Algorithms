@@ -1,5 +1,99 @@
 #include "compression.h"
 
+// Functions for managing ByteArr and ValueBuffer
+void set_value(ByteArr arr, ValueBuffer val, int offset, int size) {
+    ValueBuffer mask = 1;
+    for (int i = 0; i < size * BYTE_BITWIDTH; i++) {
+        arr[(i / BYTE_BITWIDTH) + offset] |= ((((mask << i) & val) >> ((i / BYTE_BITWIDTH) * BYTE_BITWIDTH)));
+    }
+}
+
+void set_value_bitwise(ByteArr arr, ValueBuffer val, int offset, int size) {
+    ValueBuffer mask = 1;
+    for (int i = 0; i < size; i++) {
+        arr[(i + offset) / BYTE_BITWIDTH] |= ((mask << i) & val) << (((offset + i) % 8) - i);
+    }
+}
+
+ValueBuffer get_value(ByteArr arr, int offset, int size) {
+    ValueBuffer val = 0;
+    for (int i = 0; i < size; i++) {
+        val |= ((ValueBuffer)arr[offset + i] << (BYTE_BITWIDTH * i));
+    }
+    return val;
+}
+
+ValueBuffer get_value_bitwise(ByteArr arr, int offset, int size) {
+    ValueBuffer val = 0;
+    ValueBuffer mask = 1;
+    for (int i = offset; i < offset + size; i++) {
+        val |= ((ValueBuffer)arr[i / BYTE_BITWIDTH] & (mask << (i % BYTE_BITWIDTH))) << ((i / BYTE_BITWIDTH) * BYTE_BITWIDTH);
+    }
+    return val;
+}
+
+// Functions for managing MemoryChunk
+MemoryChunk make_memory_chunk(int size, int initial) {
+    MemoryChunk result;
+    result.size = size;
+    result.valid_bitwidth = size * BYTE_BITWIDTH;  // default valid bitwidth = size * 8
+    result.body = (char *)malloc(size);
+    memset(result.body, initial, size);
+    return result;
+}
+
+MemoryChunk copy_memory_chunk(MemoryChunk target) {
+    MemoryChunk chunk;
+    chunk.size = target.size;
+    chunk.body = (char *)malloc(target.size);
+    memcpy(chunk.body, target.body, chunk.size);
+    return chunk;
+}
+
+void remove_memory_chunk(MemoryChunk chunk) {
+    free(chunk.body);
+}
+
+void remove_compression_result(CompressionResult result) {
+    remove_memory_chunk(result.compressed);
+    remove_memory_chunk(result.tag_overhead);
+}
+
+void print_memory_chunk(MemoryChunk chunk) {
+    for (int i = chunk.size-1; i >= 0; i--) {
+        printf("%02x", chunk.body[i] & 0xff);
+        if (i % 4 == 0) printf(" ");
+    }
+}
+
+void print_memory_chunk_bitwise(MemoryChunk chunk) {
+    Byte buffer, mask = 1;
+
+    for (int i = chunk.valid_bitwidth-1; i >= 0; i--) {
+        buffer = chunk.body[i / BYTE_BITWIDTH];
+        printf("%d", (buffer & mask << (i % BYTE_BITWIDTH)) != 0);
+    }
+}
+
+void print_compression_result(CompressionResult result) {
+    Byte buffer, mask = 1;
+
+    printf("======= Compression Results =======\n");
+    printf("original size:     %dBytes\n", result.original.size);
+    printf("compressed size:   %dBytes\n", result.compressed.size);
+    printf("compression ratio: %.4f\n", (double)result.original.size / result.compressed.size);
+    printf("original:   ");
+    print_memory_chunk(result.original);
+    printf("\n");
+    printf("compressed: ");
+    print_memory_chunk(result.compressed);
+    printf("\n");
+    printf("tag overhead: ");
+    print_memory_chunk_bitwise(result.tag_overhead);
+    printf(" (%dbits)\n", result.tag_overhead.valid_bitwidth);
+    printf("===================================\n");
+}
+
 CompressionResult base_plus_delta(CacheLine original) {
     CompressionResult result;
 }
@@ -8,6 +102,7 @@ CompressionResult base_delta_immediate(CacheLine original) {
     CompressionResult result;
     MetaData tag_overhead = make_memory_chunk(2, 0);  // 2Bytes of tag overhead with its valid bitwidth of 11bits
     CacheLine compressed;
+    ValueBuffer segment_num;
 
     result.original = original;
 
@@ -16,8 +111,9 @@ CompressionResult base_delta_immediate(CacheLine original) {
         if (compressed.size < original.size) {
             result.compressed = compressed;
             result.is_compressed = TRUE;
-            set_value_bitwise(tag_overhead.body, encoding, 0, 4);             // encoding        (0-3 bits)
-            set_value_bitwise(tag_overhead.body, compressed.size / 8, 4, 7);  // segment pointer (4-11bits)
+            segment_num = ceil((double)compressed.size / BYTE_BITWIDTH);
+            set_value_bitwise(tag_overhead.body, encoding, 0, 4);     // encoding        (0-3 bits)
+            set_value_bitwise(tag_overhead.body, segment_num, 4, 7);  // segment pointer (4-11bits)
             tag_overhead.valid_bitwidth = 11;   // tag_overhead = {encoding(4bits), segment_pointer(7bits)}
             result.tag_overhead = tag_overhead;
             return result;
@@ -27,7 +123,8 @@ CompressionResult base_delta_immediate(CacheLine original) {
     result.compressed = copy_memory_chunk(original);
     result.is_compressed = FALSE;
     set_value_bitwise(tag_overhead.body, 15, 0, 4);
-    set_value_bitwise(tag_overhead.body, compressed.size / 8, 4, 7);
+    segment_num = ceil((double)original.size / BYTE_BITWIDTH);
+    set_value_bitwise(tag_overhead.body, segment_num, 4, 7);
     tag_overhead.valid_bitwidth = 11;
     result.tag_overhead = tag_overhead;
     return result;
@@ -177,25 +274,4 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
 
     result.size = compressed_siz;
     return result;
-}
-
-int main(int argc, char const *argv[]) {
-    CacheLine original = make_memory_chunk(CACHE64SIZ, 0);
-    *(original.body+1) = 36;
-    printf("original: ");
-    print_memory_chunk(original);
-    printf("\n");
-    
-    // int encoding = 3;
-    // CacheLine compressed = bdi_compressing_unit(original, encoding);
-    // print_memory_chunk(compressed);
-    // print_memory_chunk_bitwise(compressed);
-    // remove_memory_chunk(compressed);
-
-    CompressionResult result = base_delta_immediate(original);
-    print_compression_result(result);
-    remove_compression_result(result);
-    remove_memory_chunk(original);
-
-    return 0;
 }

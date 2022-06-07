@@ -6,7 +6,7 @@
 #include <memory.h>
 #include <math.h>
 
-// Verbose?
+// Verbose parameter
 #define VERBOSE  // Comment this line not to display debug messages
 
 // Parameters for cache line size
@@ -15,9 +15,9 @@
 #define HWORDSIZ       2
 #define WORDSIZ        4
 #define DWORDSIZ       8
-#define CACHE32SIZ     32
-#define CACHE64SIZ     64
-#define CACHE128SIZ    128
+#define CACHE32SIZ     32   // 32Bytes cacheline
+#define CACHE64SIZ     64   // 64Bytes cacheline
+#define CACHE128SIZ    128  // 128Bytes cacheline
 
 // Boolean expression
 #define FALSE 0
@@ -30,27 +30,27 @@ typedef char *         ByteArr;      // Byte array
 typedef long long int  ValueBuffer;  // 8Bytes
 
 typedef struct {
-    int size;
-    int valid_bitwidth;
-    char *body;
+    int size;            // byte size
+    int valid_bitwidth;  // valid bitwidth
+    ByteArr body;        // actual memory block
 } MemoryChunk;
 
-typedef MemoryChunk CacheLine;
-typedef MemoryChunk MetaData;
+typedef MemoryChunk CacheLine;  // memory block representing cacheline
+typedef MemoryChunk MetaData;   // memory block represinting compression overheads (e.g. tag overhead)
 
 typedef struct {
-    char *compression_type;
-    CacheLine original;
-    CacheLine compressed;
-    Bool is_compressed;
-    MetaData tag_overhead;
+    char *compression_type;  // name of compression algorithm
+    CacheLine original;      // original cacheline (given)
+    CacheLine compressed;    // compressed cacheline (induced)
+    Bool is_compressed;      // flag identifying whether the given cacheline is compressed
+    MetaData tag_overhead;   // tag overhead (e.g. encoding type, segment pointer ...)
 } CompressionResult;
 
 typedef struct {
-    char *compression_type;
-    CacheLine original;
-    CacheLine compressed;
-    Bool is_decompressed;
+    char *compression_type;  // name of decompression algorithm
+    CacheLine original;      // original cacheline (induced)
+    CacheLine compressed;    // compressed cacheline (given)
+    Bool is_decompressed;    // flag identifying whether the given cacheline is decompressed
 } DecompressionResult;
 
 // Functions for managing ByteArr and ValueBuffer

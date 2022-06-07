@@ -3,7 +3,10 @@
 int main(int argc, char const *argv[]) {
     // // Testbench for BDI algorithm
     // CacheLine original = make_memory_chunk(CACHE64SIZ, 0);
-    // *(original.body+1) = 36;
+    // set_value(original.body, 0x24, 0, 1);
+    // set_value(original.body, 0x24, 1, 1);
+    // set_value(original.body, 0x24, 2, 1);
+    // set_value(original.body, 0x24, 3, 1);
 
     // CompressionResult result = bdi_compression(original);
     // print_compression_result(result);
@@ -20,8 +23,14 @@ int main(int argc, char const *argv[]) {
 
     // Testbench for FPC algorithm
     CacheLine original = make_memory_chunk(CACHE64SIZ, 0);
-    set_value(original.body, 0x00, 0, 4);
-    set_value(original.body, 0x02, 4, 4);
+    set_value(original.body, 0x00000000, 0, 4);
+    set_value(original.body, 0x00000002, 4, 4);
+    set_value(original.body, 0x0000007c, 8, 4);
+    set_value(original.body, 0x00003918, 12, 4);
+    set_value(original.body, 0xfffb0045, 16, 4);
+    set_value(original.body, 0xfcfcfcfc, 20, 4);
+    set_value(original.body, 0x92817382, 24, 4);
+    set_value(original.body, 0x00000000, 28, 4);
 
     CompressionResult result = fpc_compression(original);
     print_compression_result(result);

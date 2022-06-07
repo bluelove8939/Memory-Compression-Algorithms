@@ -21,7 +21,7 @@ void set_value(ByteArr arr, ValueBuffer val, int offset, int size) {
 void set_value_bitwise(ByteArr arr, ValueBuffer val, int offset, int size) {
     ValueBuffer mask = 1;
     for (int i = 0; i < size; i++) {
-        arr[(i + offset) / BYTE_BITWIDTH] |= ((mask << i) & val) << (((offset + i) % 8) - i);
+        arr[(i + offset) / BYTE_BITWIDTH] |= ((val & (mask << i)) >> i) << ((i + offset) % BYTE_BITWIDTH);
     }
 }
 
@@ -30,6 +30,7 @@ ValueBuffer get_value(ByteArr arr, int offset, int size) {
     for (int i = 0; i < size; i++) {
         val |= ((ValueBuffer)arr[offset + i] << (BYTE_BITWIDTH * i));
     }
+    val = SIGNEX(val, size * BYTE_BITWIDTH - 1);
     return val;
 }
 
@@ -126,6 +127,9 @@ void print_compression_result(CompressionResult result) {
     printf("compressed: ");
     print_memory_chunk(result.compressed);
     printf("\n");
+    printf("compressed(bitwise)\n");
+    print_memory_chunk_bitwise(result.compressed);
+    printf("\n");
     printf("tag overhead: ");
     print_memory_chunk_bitwise(result.tag_overhead);
     printf(" (%dbits)\n", result.tag_overhead.valid_bitwidth);
@@ -208,7 +212,7 @@ CompressionResult bdi_compression(CacheLine original) {
 DecompressionResult bdi_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
     CacheLine original = make_memory_chunk(original_size, 0);
     DecompressionResult result;
-    ValueBuffer base, buffer;
+    ValueBuffer base, buffer, mask=1;
     int k, d;
     int encoding = get_value_bitwise(tag_overhead.body, 0, 4);
     int segment_num = get_value_bitwise(tag_overhead.body, 4, 7);
@@ -314,7 +318,7 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
 #endif
         for (int i = 0; i < original.size; i++) {
 #ifdef VERBOSE
-            printf("[ITER %2d] base: 0x%016x  buffer: 0x%016x\n", i, 0, original.body[i]);
+            printf("[ITER %2d] base: 0x%02x  buffer: 0x%02x\n", i, 0, original.body[i]);
 #endif
             if (original.body[i] != 0) {
 #ifdef VERBOSE
@@ -337,7 +341,7 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
         base = get_value(original.body, 0, 8);
         for (int i = 0; i < original.size; i += 8) {
 #ifdef VERBOSE
-            printf("[ITER %2d] base: 0x%016x  buffer: 0x%016x\n", i, base, get_value(original.body, i, 8));
+            printf("[ITER %2d] base: 0x%016llx  buffer: 0x%016llx\n", i, base, get_value(original.body, i, 8));
 #endif
             if (get_value(original.body, i, 8) != base) {
 #ifdef VERBOSE
@@ -407,7 +411,7 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
         delta = buffer - base;
 
 #ifdef VERBOSE
-        printf("[ITER %2d] base: 0x%016x  buffer: 0x%016x  delta: 0x%016x\n", i/k, base, buffer, delta);
+        printf("[ITER %2d] base: 0x%016llx  buffer: 0x%016llx  delta: 0x%016llx\n", i/k, base, buffer, delta);
 #endif
 
         // 2-2. Check whether calculated delta value is sign-extended within d-Bytes
@@ -458,11 +462,11 @@ CompressionResult fpc_compression(CacheLine original) {
     CompressionResult result;
     CacheLine compressed = make_memory_chunk(original.size * 2, 0);
     MetaData tag_overhead = make_memory_chunk(1, 0);
-    ValueBuffer buffer, mask = 1;
+    ValueBuffer buffer, mask = 1, bytemask = 0xff;
     Bool compressed_flag, repeating_flag;
     Bool zeros_flag = FALSE;
     Bool initial, sign_extended_flag;
-    char initial_byte;
+    ValueBuffer initial_byte;
     int extended_until;
     int pivot = 0;
     int zeros_len = 0;
@@ -504,7 +508,7 @@ CompressionResult fpc_compression(CacheLine original) {
             case 3:
 #ifdef VERBOSE
                 printf("failed\n");
-                printf("buffer = 0x%016x\n", buffer);
+                printf("buffer = 0x%016llx\n", buffer);
                 printf("prefix 1 or 2 or 3: ");
 #endif
                 initial = ((buffer & mask << WORDSIZ * BYTE_BITWIDTH - 1) != 0);
@@ -569,7 +573,7 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("failed\n");
                 printf("prefix 5: ");
 #endif
-                if (buffer & 0xffff == (buffer & 0xffff0000) >> (HWORDSIZ * BYTE_BITWIDTH)) {
+                if (buffer & 0x0000ffff == (buffer & 0xffff0000) >> (HWORDSIZ * BYTE_BITWIDTH)) {
                     set_value_bitwise(compressed.body, 5, pivot, 3);
                     set_value_bitwise(compressed.body, buffer & 0xffff, pivot+3, 16);
                     pivot += 19;
@@ -590,9 +594,9 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("prefix 6: ");
 #endif
                 repeating_flag = TRUE;
-                initial_byte = buffer & 0xff;
+                initial_byte = buffer & 0x00000000000000ff;
                 for (int j = 0; j < 4; j++) {
-                    if (buffer & (0xff << (j * BYTE_BITWIDTH)) >> (j * BYTE_BITWIDTH) != (ValueBuffer)initial_byte) {
+                    if ((buffer & (0x00000000000000ff << (j * BYTE_BITWIDTH))) >> (j * BYTE_BITWIDTH) != (ValueBuffer)initial_byte) {
                         repeating_flag = FALSE;
                     }
                 }
@@ -633,7 +637,7 @@ CompressionResult fpc_compression(CacheLine original) {
 
     int compressed_size = ceil((double)pivot / BYTE_BITWIDTH);
 
-    if (pivot < original.size) {
+    if (compressed_size < original.size) {
         compressed.size = compressed_size;
         compressed.valid_bitwidth = pivot;
         result.compressed = compressed;

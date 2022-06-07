@@ -19,15 +19,18 @@
 #define CACHE64SIZ     64   // 64Bytes cacheline
 #define CACHE128SIZ    128  // 128Bytes cacheline
 
+// Sign extension macro
+#define SIGNEX(v, sb) ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
+
 // Boolean expression
 #define FALSE 0
 #define TRUE  1
 typedef char  Bool;
 
 // Structures for representing memory chunks(blocks)
-typedef char           Byte;         // 1Byte (8bit)
-typedef char *         ByteArr;      // Byte array
-typedef long long int  ValueBuffer;  // 8Bytes
+typedef unsigned char           Byte;         // 1Byte (8bit)
+typedef unsigned char *  ByteArr;      // Byte array
+typedef long long int    ValueBuffer;  // 8Bytes
 
 typedef struct {
     int size;            // byte size

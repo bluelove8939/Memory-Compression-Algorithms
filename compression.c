@@ -609,7 +609,6 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("prefix 6: ");
 #endif
                 repeating_flag = FALSE;
-                printf("first byte: 0x%08x  second byte: 0x%08x\n", buffer & 0x000000ff, (buffer & 0x0000ff00) >> (BYTESIZ * BYTE_BITWIDTH * 1));
                 if (((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0x0000ff00) >> (BYTESIZ * BYTE_BITWIDTH * 1))) &&
                     ((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0x00ff0000) >> (BYTESIZ * BYTE_BITWIDTH * 2))) &&
                     ((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0xff000000) >> (BYTESIZ * BYTE_BITWIDTH * 3)))) {
@@ -650,7 +649,6 @@ CompressionResult fpc_compression(CacheLine original) {
             default:
                 break;
             }
-            
         }
     }
 
@@ -682,6 +680,7 @@ DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhea
     DecompressionResult result;
 
     // 1. Zero run detector
+
 
     return result;
 }

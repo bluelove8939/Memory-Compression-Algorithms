@@ -127,9 +127,9 @@ void print_compression_result(CompressionResult result) {
     printf("compressed: ");
     print_memory_chunk(result.compressed);
     printf("\n");
-    printf("compressed(bitwise)\n");
-    print_memory_chunk_bitwise(result.compressed);
-    printf("\n");
+    // printf("compressed(bitwise)\n");
+    // print_memory_chunk_bitwise(result.compressed);
+    // printf("\n");
     printf("tag overhead: ");
     print_memory_chunk_bitwise(result.tag_overhead);
     printf(" (%dbits)\n", result.tag_overhead.valid_bitwidth);
@@ -456,20 +456,21 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
  * 
  * Functions:
  *   fpc_compression: FPC compression algorithm
+ *   fpc_decompression: FPC decompression algorithm
  */
 
 CompressionResult fpc_compression(CacheLine original) {
     CompressionResult result;
     CacheLine compressed = make_memory_chunk(original.size * 2, 0);
-    MetaData tag_overhead = make_memory_chunk(1, 0);
-    ValueBuffer buffer, mask = 1, bytemask = 0xff;
+    MetaData tag_overhead = make_memory_chunk(4, 0);
+    WordBuffer buffer, mask = 1;
     Bool compressed_flag, repeating_flag;
-    Bool zeros_flag = FALSE;
-    Bool initial, sign_extended_flag;
-    ValueBuffer initial_byte;
-    int extended_until;
+    Bool initial;
+    ByteBuffer initial_byte;
     int pivot = 0;
     int zeros_len = 0;
+    int tag_overhead_width = 0;
+
 
 #ifdef VERBOSE
     printf("Compressing with FPC algorithm...\n");
@@ -477,8 +478,7 @@ CompressionResult fpc_compression(CacheLine original) {
 
     result.compression_type = "FPC(Frequent Pattern Compression";
     result.original = original;
-    tag_overhead.valid_bitwidth = 0;
-    result.tag_overhead = tag_overhead;
+    
 
     for (int i = 0; i < original.size;) {
 #ifdef VERBOSE
@@ -491,9 +491,10 @@ CompressionResult fpc_compression(CacheLine original) {
             printf("succeed (len: %d)\n", zeros_len);
 #endif
             i += zeros_len;
-            set_value_bitwise(compressed.body, 0, pivot, 3);
-            set_value_bitwise(compressed.body, zeros_len-1, pivot+3, 3);
-            pivot += 6;
+            set_value_bitwise(tag_overhead.body, 0, tag_overhead_width, 3);
+            set_value_bitwise(compressed.body, zeros_len-1, pivot, 3);
+            tag_overhead_width += 3;
+            pivot += 3;
             continue;
         }
 
@@ -504,42 +505,57 @@ CompressionResult fpc_compression(CacheLine original) {
         for (int prefix = 1; prefix < 8 && compressed_flag == FALSE; prefix++) {
             switch (prefix) {
             case 1:
-            case 2:
-            case 3:
 #ifdef VERBOSE
                 printf("failed\n");
-                printf("buffer = 0x%016llx\n", buffer);
-                printf("prefix 1 or 2 or 3: ");
+                printf("buffer = 0x%08x\n", buffer);
+                printf("prefix 1: ");
 #endif
-                initial = ((buffer & mask << WORDSIZ * BYTE_BITWIDTH - 1) != 0);
-                for (extended_until = WORDSIZ * BYTE_BITWIDTH - 1; extended_until >= 0; extended_until--) {
-                    if (initial != ((buffer & mask << extended_until) != 0))
-                        break;
+                if (buffer == SIGNEX(buffer & 0b1111, 3)) {  // if LSB 4bits are sign-extended
+                    set_value_bitwise(tag_overhead.body, 1, tag_overhead_width, 3);
+                    set_value_bitwise(compressed.body, buffer, pivot, 4);
+                    tag_overhead_width += 3;
+                    pivot += 4;
+                    compressed_flag = TRUE;
+#ifdef VERBOSE
+                    printf("succeed\n");
+#endif
                 }
 
-                if (extended_until < 4) {  // if LSB 4bits are sign-extended
-                    set_value_bitwise(compressed.body, 1, pivot, 3);
-                    set_value_bitwise(compressed.body, buffer, pivot+3, 4);
-                    pivot += 7;
-                    compressed_flag = TRUE;
+                break;
+
+            case 2:
 #ifdef VERBOSE
-                    printf("succeed (prefix 1)\n");
+                // printf("failed\n");
+                printf("failed\n");
+                printf("prefix 2: ");
 #endif
-                } else if (extended_until < 8) {  // if LSB 8bits are sign-extended
-                    set_value_bitwise(compressed.body, 2, pivot, 3);
+                if (buffer == (ByteBuffer)(buffer & 0xff)) {  // if LSB 8bits are sign-extended
+                    set_value_bitwise(tag_overhead.body, 2, tag_overhead_width, 3);
                     set_value_bitwise(compressed.body, buffer, pivot+3, 8);
-                    pivot += 11;
+                    tag_overhead_width += 3;
+                    pivot += 8;
                     compressed_flag = TRUE;
 #ifdef VERBOSE
-                    printf("succeed (prefix 2)\n");
+                    printf("succeed\n");
 #endif
-                } else if (extended_until < 16) {  // if LSB 16bits are sign-extended
-                    set_value_bitwise(compressed.body, 3, pivot, 3);
+                }
+
+                break;
+
+            case 3:
+#ifdef VERBOSE
+                // printf("failed\n");
+                printf("failed\n");
+                printf("prefix 3: ");
+#endif
+                if (buffer == (HwordBuffer)(buffer & 0xffff)) {  // if LSB 16bits are sign-extended
+                    set_value_bitwise(tag_overhead.body, 3, tag_overhead_width, 3);
                     set_value_bitwise(compressed.body, buffer, pivot+3, 16);
-                    pivot += 19;
+                    tag_overhead_width += 3;
+                    pivot += 16;
                     compressed_flag = TRUE;
 #ifdef VERBOSE
-                    printf("succeed (prefix 3)\n");
+                    printf("succeed\n");
 #endif
                 }
 
@@ -550,16 +566,11 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("failed\n");
                 printf("prefix 4: ");
 #endif
-                initial = ((buffer & mask) != 0);
-                for (extended_until = 0; extended_until < WORDSIZ * BYTE_BITWIDTH; extended_until++) {
-                    if (initial != ((buffer & mask << extended_until) != 0))
-                        break;
-                }
-
-                if (extended_until >= 16) {  // if MSB 16bits are sign-extended
-                    set_value_bitwise(compressed.body, 4, pivot, 3);
-                    set_value_bitwise(compressed.body, buffer, pivot+3, 16);
-                    pivot += 19;
+                if ((buffer & 0xffff0000) == 0x0000) {
+                    set_value_bitwise(tag_overhead.body, 4, tag_overhead_width, 3);
+                    set_value_bitwise(compressed.body, buffer & 0x0000ffff, pivot+3, 16);
+                    tag_overhead_width += 3;
+                    pivot += 16;
                     compressed_flag = TRUE;
 #ifdef VERBOSE
                     printf("succeed\n");
@@ -573,10 +584,14 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("failed\n");
                 printf("prefix 5: ");
 #endif
-                if (buffer & 0x0000ffff == (buffer & 0xffff0000) >> (HWORDSIZ * BYTE_BITWIDTH)) {
-                    set_value_bitwise(compressed.body, 5, pivot, 3);
-                    set_value_bitwise(compressed.body, buffer & 0xffff, pivot+3, 16);
-                    pivot += 19;
+                HwordBuffer lsb =  buffer & 0xffff;
+                HwordBuffer msb = (buffer & 0xffff0000) >> (2 * BYTE_BITWIDTH);
+
+                if (lsb == (ByteBuffer)(lsb & 0xff) && msb == (ByteBuffer)(msb & 0xff)) {
+                    set_value_bitwise(tag_overhead.body, 5, tag_overhead_width, 3);
+                    set_value_bitwise(compressed.body, (lsb & 0xff) + (msb & 0xff00), pivot+3, 16);
+                    tag_overhead_width += 3;
+                    pivot += 16;
                     compressed_flag = TRUE;
                 }
 
@@ -593,18 +608,19 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("failed\n");
                 printf("prefix 6: ");
 #endif
-                repeating_flag = TRUE;
-                initial_byte = buffer & 0x00000000000000ff;
-                for (int j = 0; j < 4; j++) {
-                    if ((buffer & (0x00000000000000ff << (j * BYTE_BITWIDTH))) >> (j * BYTE_BITWIDTH) != (ValueBuffer)initial_byte) {
-                        repeating_flag = FALSE;
-                    }
+                repeating_flag = FALSE;
+                printf("first byte: 0x%08x  second byte: 0x%08x\n", buffer & 0x000000ff, (buffer & 0x0000ff00) >> (BYTESIZ * BYTE_BITWIDTH * 1));
+                if (((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0x0000ff00) >> (BYTESIZ * BYTE_BITWIDTH * 1))) &&
+                    ((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0x00ff0000) >> (BYTESIZ * BYTE_BITWIDTH * 2))) &&
+                    ((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0xff000000) >> (BYTESIZ * BYTE_BITWIDTH * 3)))) {
+                    repeating_flag = TRUE;
                 }
                 
                 if (repeating_flag) {
-                    set_value_bitwise(compressed.body, 6, pivot, 3);
+                    set_value_bitwise(tag_overhead.body, 6, tag_overhead_width, 3);
                     set_value_bitwise(compressed.body, (ValueBuffer)initial_byte, pivot+3, 8);
-                    pivot += 11;
+                    tag_overhead_width += 3;
+                    pivot += 8;
                     compressed_flag = TRUE;
                 }
 
@@ -619,12 +635,15 @@ CompressionResult fpc_compression(CacheLine original) {
             case 7:
 #ifdef VERBOSE
                 printf("failed\n");
-                printf("failed to compressed buffer value 0x%08x", buffer);
+                printf("prefix 7: ");
 #endif
-                set_value_bitwise(compressed.body, 7, pivot, 3);
+                set_value_bitwise(tag_overhead.body, 7, tag_overhead_width, 3);
                 set_value_bitwise(compressed.body, buffer, pivot+3, 32);
-                pivot += 35;
+                tag_overhead_width += 3;
+                pivot += 32;
                 compressed_flag = TRUE;
+
+                printf("succeed\n");
                 
                 break;
 
@@ -642,7 +661,12 @@ CompressionResult fpc_compression(CacheLine original) {
         compressed.valid_bitwidth = pivot;
         result.compressed = compressed;
         result.is_compressed = TRUE;
+        tag_overhead.valid_bitwidth = tag_overhead_width;
+        result.tag_overhead = tag_overhead;
     } else {
+#ifdef VERBOSE
+        printf("compression failed due to size increasing (there must be an error on compressing process)\n");
+#endif
         result.compressed = copy_memory_chunk(original);
         result.is_compressed = FALSE;
     }
@@ -651,5 +675,13 @@ CompressionResult fpc_compression(CacheLine original) {
     printf("compression completed\n");
 #endif
     
+    return result;
+}
+
+DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
+    DecompressionResult result;
+
+    // 1. Zero run detector
+
     return result;
 }

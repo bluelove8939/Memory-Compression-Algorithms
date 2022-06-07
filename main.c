@@ -1,7 +1,7 @@
 #include "compression.h"
 
 int main(int argc, char const *argv[]) {
-    // // Testbench for BDI algorithm
+    // Testbench for BDI algorithm
     // CacheLine original = make_memory_chunk(CACHE64SIZ, 0);
     // set_value(original.body, 0x24, 0, 1);
     // set_value(original.body, 0x24, 1, 1);
@@ -23,14 +23,14 @@ int main(int argc, char const *argv[]) {
 
     // Testbench for FPC algorithm
     CacheLine original = make_memory_chunk(CACHE64SIZ, 0);
-    set_value(original.body, 0x00000000, 0, 4);
-    set_value(original.body, 0x00000002, 4, 4);
-    set_value(original.body, 0x0000007c, 8, 4);
-    set_value(original.body, 0x00003918, 12, 4);
-    set_value(original.body, 0xfffb0045, 16, 4);
-    set_value(original.body, 0xfcfcfcfc, 20, 4);
-    set_value(original.body, 0x92817382, 24, 4);
-    set_value(original.body, 0x00000000, 28, 4);
+    set_value(original.body, 0x00000000, 0,  4);  // prefix 0
+    set_value(original.body, 0x00000002, 4,  4);  // prefix 1
+    set_value(original.body, 0x0000007c, 8,  4);  // prefix 2
+    set_value(original.body, 0x00003918, 12, 4);  // prefix 3
+    set_value(original.body, 0x0000ffbb, 16, 4);  // prefix 4
+    set_value(original.body, 0xfffb0045, 20, 4);  // prefix 5
+    set_value(original.body, 0xfcfcfcfc, 24, 4);  // prefix 6
+    set_value(original.body, 0x92817382, 28, 4);  // prefix 7
 
     CompressionResult result = fpc_compression(original);
     print_compression_result(result);

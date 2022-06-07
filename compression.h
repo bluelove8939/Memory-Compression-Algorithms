@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <stdint.h>
 #include <math.h>
 
 // Verbose parameter
@@ -19,8 +20,10 @@
 #define CACHE64SIZ     64   // 64Bytes cacheline
 #define CACHE128SIZ    128  // 128Bytes cacheline
 
-// Sign extension macro
-#define SIGNEX(v, sb) ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
+// Macros for sign extension and bit masking (8Bytes buffer)
+#define SIGNEX(v, sb)  ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
+#define BITMASK(b)     (0x0000000000000001 << (b) * (BYTE_BITWIDTH))
+#define BYTEMASK(b)    (0x00000000000000ff << (b) * (BYTE_BITWIDTH))
 
 // Boolean expression
 #define FALSE 0
@@ -28,9 +31,12 @@
 typedef char  Bool;
 
 // Structures for representing memory chunks(blocks)
-typedef unsigned char           Byte;         // 1Byte (8bit)
-typedef unsigned char *  ByteArr;      // Byte array
-typedef long long int    ValueBuffer;  // 8Bytes
+typedef uint8_t    Byte;         // 1Byte (8bit)
+typedef uint8_t *  ByteArr;      // Byte array
+typedef int8_t     ByteBuffer;   // 1Byte  buffer
+typedef int16_t    HwordBuffer;  // 2Bytes buffer
+typedef int32_t    WordBuffer;   // 4Bytes buffer
+typedef int64_t    ValueBuffer;  // 8Bytes buffer
 
 typedef struct {
     int size;            // byte size
@@ -79,6 +85,7 @@ DecompressionResult bdi_decompression(CacheLine compressed, MetaData tag_overhea
 CacheLine bdi_compressing_unit(CacheLine original, int encoding);                                       // Compressing Unit (CU)
 
 // Functions for FPC(Frequent Pattern Compression) algorithm
-CompressionResult fpc_compression(CacheLine original);  // FPC compression algorithm
+CompressionResult fpc_compression(CacheLine original);        // FPC compression algorithm
+DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // FPC decompression algorithm
 
 #endif

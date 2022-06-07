@@ -1,6 +1,16 @@
 #include "compression.h"
 
-// Functions for managing ByteArr and ValueBuffer
+/* 
+ * Functions for managing ByteArr and ValueBuffer 
+ *   ByteArr is literally a structure for byte array representing memory block.
+ *   ValueBuffer is 8Byte buffer for reading and writing value to ByteArr.
+ * 
+ * Functions:
+ *   set_value: set value of the byte array
+ *   set_value_bitwise: set value of the byte array with bitwise offset and size argument
+ *   get_value: get value of the byte array
+ *   get_value_bitwise: get value of the byte array with bitwise offset and size argument
+ */
 void set_value(ByteArr arr, ValueBuffer val, int offset, int size) {
     ValueBuffer mask = 1;
     for (int i = 0; i < size * BYTE_BITWIDTH; i++) {
@@ -33,7 +43,22 @@ ValueBuffer get_value_bitwise(ByteArr arr, int offset, int size) {
 }
 
 
-// Functions for managing MemoryChunk
+/* 
+ * Functions for managing MemoryChunk
+ *   MemoryChunk is a structure for representing memory blocks e.g. cache line and DRAM.
+ *   Functions below are for managing those memory blocks.
+ * 
+ * Functions:
+ *   make_memory_chunk: makes an array with its given size and bitwidth
+ *   copy_memory_chunk: copy a given memory chunk
+ *   remove_memory_chunk: removes memory chunk
+ *   remove_compression_result: removes compression result (compressed memory chunk and tag overhead)
+ *   remove_decompression_result: removes decompression result (original memory chunk)
+ *   print_memory_chunk: print content stored in the memory chunk in hexadecimal form
+ *   print_memory_chunk_bitwise: print content stored in the memory chunk in binary form
+ *   print_compression_result: prints compression result
+ *   print_decompression_result: prints decompression result
+ */
 MemoryChunk make_memory_chunk(int size, int initial) {
     MemoryChunk result;
     result.size = size;
@@ -130,12 +155,16 @@ void print_decompression_result(DecompressionResult result) {
 
 /* 
  * Functions for BDI algorithm
+ *   BDI(Base Delta Immediate) algorithm is a compression algorithm usually used to compress
+ *   memory blocks e.g. cache line.
+ *
+ * Functions:
  *   bdi_compression: BDI compression algorithm
  *   bdi_decompression : BDI decompression algorithm
  *   bdi_compressing_unit: actually compresses given cacheline with certain encoding
  * 
  * Note
- *   This code snippet is written with its reference to the paper from PACT12 conference
+ *   This algorithm is reference to the paper of PACT12 conference
  *   url: https://users.ece.cmu.edu/~omutlu/pub/bdi-compression_pact12.pdf
  */
 
@@ -418,6 +447,10 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
 
 /* 
  * Functions for FPC algorithm
+ *   FPC(Frequent Pattern Compression) is an algorithm used to compress memory block by
+ *   encoding frequent memory pattern into smaller codeword. 
+ * 
+ * Functions:
  *   fpc_compression: FPC compression algorithm
  */
 

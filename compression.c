@@ -11,6 +11,7 @@
  *   get_value: get value of the byte array
  *   get_value_bitwise: get value of the byte array with bitwise offset and size argument
  */
+
 void set_value(ByteArr arr, ValueBuffer val, int offset, int size) {
     ValueBuffer mask = 1;
     for (int i = 0; i < size * BYTE_BITWIDTH; i++) {
@@ -60,6 +61,7 @@ ValueBuffer get_value_bitwise(ByteArr arr, int offset, int size) {
  *   print_compression_result: prints compression result
  *   print_decompression_result: prints decompression result
  */
+
 MemoryChunk make_memory_chunk(int size, int initial) {
     MemoryChunk result;
     result.size = size;

@@ -29,9 +29,8 @@ void set_value_bitwise(ByteArr arr, ValueBuffer val, int offset, int size) {
 ValueBuffer get_value(ByteArr arr, int offset, int size) {
     ValueBuffer val = 0;
     for (int i = 0; i < size; i++) {
-        val |= ((ValueBuffer)arr[offset + i] << (BYTE_BITWIDTH * i));
+        val += ((ValueBuffer)arr[offset + i] << (BYTE_BITWIDTH * i));
     }
-    val = SIGNEX(val, size * BYTE_BITWIDTH - 1);
     return val;
 }
 
@@ -160,6 +159,43 @@ void print_decompression_result(DecompressionResult result) {
     }
     printf("is decompressed: %s\n", result.is_decompressed ? "true" : "false");
     printf("===================================\n");
+}
+
+/*
+ * Functions for reading and writing cacheline file externally
+ * 
+ * Functions:
+ *   file2cacheline: convert binary file to cacheline
+ */
+
+MemoryChunk file2memorychunk(char *filename, int offset, int size) {
+#ifdef VERBOSE
+    printf("reading file \'%s\'...\n", filename);
+    printf("offset: %d  size: $d\n", offset, size);
+#endif
+
+    FILE *fp = fopen(filename, "rb");
+    MemoryChunk chunk = make_memory_chunk(size, 0);
+    ByteBuffer buffer;
+
+    fseek(fp, 0, SEEK_END);
+    if (ftell(fp) < size) return chunk;
+
+    fseek(fp, offset, SEEK_SET);
+
+    for (int i = 0; i < size; i++) {
+        fread(&buffer, sizeof(buffer), 1, fp);
+        set_value(chunk.body, buffer, i, 1);
+    }
+
+#ifdef VERBOSE
+    printf("reading completed\n");
+    printf("chunk: ");
+    print_memory_chunk(chunk);
+    printf("\n");
+#endif
+
+    return chunk;
 }
 
 

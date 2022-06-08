@@ -83,6 +83,7 @@ void print_memory_chunk(MemoryChunk chunk);
 void print_memory_chunk_bitwise(MemoryChunk chunk);
 void print_compression_result(CompressionResult result);
 void print_decompression_result(DecompressionResult result);
+MemoryChunk file2memorychunk(char *filename, int offset, int size);
 
 // Functions for BDI(Base Delta Immediate) algorithm
 CompressionResult bdi_compression(CacheLine original);                                                  // BDI compression algorithm

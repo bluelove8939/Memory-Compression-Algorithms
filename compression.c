@@ -824,3 +824,27 @@ DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhea
 
     return result;
 }
+
+
+/* 
+ * Functions for C-PACK algorithm
+ *   C-PACK(Cache Packer) is an algorithm used to compress memory block by encoding consecutive-zeros pattern and  
+ *   frequent memory pattern into smaller codeword by using small dictionary. 
+ * 
+ * Functions:
+ *   cpack_compression: C-PACK compression algorithm
+ *   cpack_decompression: C-PACK decompression algorithm
+ */
+
+CompressionResult cpack_compression(CacheLine original) {
+    CompressionResult result;
+
+    result.original = original;
+
+    return result;
+}
+
+DecompressionResult cpack_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
+    DecompressionResult result;
+    return result;
+}

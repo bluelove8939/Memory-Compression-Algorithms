@@ -133,9 +133,9 @@ void print_compression_result(CompressionResult result) {
     printf("compressed: ");
     print_memory_chunk(result.compressed);
     printf("\n");
-    printf("compressed(bitwise)\n");
-    print_memory_chunk_bitwise(result.compressed);
-    printf("\n");
+    // printf("compressed(bitwise)\n");
+    // print_memory_chunk_bitwise(result.compressed);
+    // printf("\n");
     printf("tag overhead: ");
     print_memory_chunk_bitwise(result.tag_overhead);
     printf(" (%dbits)\n", result.tag_overhead.valid_bitwidth);
@@ -822,29 +822,5 @@ DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhea
 
     result.original = original;
 
-    return result;
-}
-
-
-/* 
- * Functions for C-PACK algorithm
- *   C-PACK(Cache Packer) is an algorithm used to compress memory block by encoding consecutive-zeros pattern and  
- *   frequent memory pattern into smaller codeword by using small dictionary. 
- * 
- * Functions:
- *   cpack_compression: C-PACK compression algorithm
- *   cpack_decompression: C-PACK decompression algorithm
- */
-
-CompressionResult cpack_compression(CacheLine original) {
-    CompressionResult result;
-
-    result.original = original;
-
-    return result;
-}
-
-DecompressionResult cpack_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
-    DecompressionResult result;
     return result;
 }

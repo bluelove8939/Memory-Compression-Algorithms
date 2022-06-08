@@ -94,7 +94,7 @@ CompressionResult fpc_compression(CacheLine original);                          
 DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // FPC decompression algorithm
 
 // Functions for C-PACK (Cache Packer) algorithm
-CompressionResult cpack_compression(CacheLine original);                                                  // C-PACK compression algorithm
-DecompressionResult cpack_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // C-PACK decompression algorithm
+// CompressionResult cpack_compression(CacheLine original);                                                  // C-PACK compression algorithm
+// DecompressionResult cpack_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // C-PACK decompression algorithm
 
 #endif

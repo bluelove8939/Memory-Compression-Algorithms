@@ -26,9 +26,14 @@
 #define BYTEMASK(b)    (0x00000000000000ff << (b) * (BYTE_BITWIDTH))
 
 // Boolean expression
+#ifndef BOOLEAN_EXPR
+#define BOOLEAN_ExPR
+
 #define FALSE 0
 #define TRUE  1
 typedef char  Bool;
+
+#endif
 
 // Structures for representing memory chunks(blocks)
 typedef uint8_t    Byte;         // 1Byte (8bit)
@@ -85,7 +90,7 @@ DecompressionResult bdi_decompression(CacheLine compressed, MetaData tag_overhea
 CacheLine bdi_compressing_unit(CacheLine original, int encoding);                                       // Compressing Unit (CU)
 
 // Functions for FPC(Frequent Pattern Compression) algorithm
-CompressionResult fpc_compression(CacheLine original);        // FPC compression algorithm
+CompressionResult fpc_compression(CacheLine original);                                                  // FPC compression algorithm
 DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // FPC decompression algorithm
 
 #endif

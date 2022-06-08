@@ -38,8 +38,12 @@ ValueBuffer get_value(ByteArr arr, int offset, int size) {
 ValueBuffer get_value_bitwise(ByteArr arr, int offset, int size) {
     ValueBuffer val = 0;
     ValueBuffer mask = 1;
-    for (int i = offset; i < offset + size; i++) {
-        val |= ((ValueBuffer)arr[i / BYTE_BITWIDTH] & (mask << (i % BYTE_BITWIDTH))) >> (i % BYTE_BITWIDTH) - (i-offset);
+    int block_idx, block_bit_idx, output_bit_idx;
+    for (int i = 0; i < size; i++) {
+        block_idx = (i + offset) / BYTE_BITWIDTH;
+        block_bit_idx = (i + offset) % BYTE_BITWIDTH;
+        output_bit_idx = i;
+        val += ((ValueBuffer)arr[block_idx] & (mask << (block_bit_idx))) >> block_bit_idx << output_bit_idx;
     }
     return val;
 }
@@ -129,9 +133,9 @@ void print_compression_result(CompressionResult result) {
     printf("compressed: ");
     print_memory_chunk(result.compressed);
     printf("\n");
-    // printf("compressed(bitwise)\n");
-    // print_memory_chunk_bitwise(result.compressed);
-    // printf("\n");
+    printf("compressed(bitwise)\n");
+    print_memory_chunk_bitwise(result.compressed);
+    printf("\n");
     printf("tag overhead: ");
     print_memory_chunk_bitwise(result.tag_overhead);
     printf(" (%dbits)\n", result.tag_overhead.valid_bitwidth);
@@ -466,6 +470,7 @@ CompressionResult fpc_compression(CacheLine original) {
     CacheLine compressed = make_memory_chunk(original.size * 2, 0);
     MetaData tag_overhead = make_memory_chunk(4, 0);
     WordBuffer buffer, mask = 1;
+    HwordBuffer lsb, msb;
     Bool compressed_flag, repeating_flag;
     Bool initial;
     ByteBuffer initial_byte;
@@ -533,7 +538,7 @@ CompressionResult fpc_compression(CacheLine original) {
 #endif
                 if (buffer == (ByteBuffer)(buffer & 0xff)) {  // if LSB 8bits are sign-extended
                     set_value_bitwise(tag_overhead.body, 2, tag_overhead_width, 3);
-                    set_value_bitwise(compressed.body, buffer, pivot+3, 8);
+                    set_value_bitwise(compressed.body, buffer, pivot, 8);
                     tag_overhead_width += 3;
                     pivot += 8;
                     compressed_flag = TRUE;
@@ -552,7 +557,7 @@ CompressionResult fpc_compression(CacheLine original) {
 #endif
                 if (buffer == (HwordBuffer)(buffer & 0xffff)) {  // if LSB 16bits are sign-extended
                     set_value_bitwise(tag_overhead.body, 3, tag_overhead_width, 3);
-                    set_value_bitwise(compressed.body, buffer, pivot+3, 16);
+                    set_value_bitwise(compressed.body, buffer, pivot, 16);
                     tag_overhead_width += 3;
                     pivot += 16;
                     compressed_flag = TRUE;
@@ -570,7 +575,7 @@ CompressionResult fpc_compression(CacheLine original) {
 #endif
                 if ((buffer & 0xffff0000) == 0x0000) {
                     set_value_bitwise(tag_overhead.body, 4, tag_overhead_width, 3);
-                    set_value_bitwise(compressed.body, buffer & 0x0000ffff, pivot+3, 16);
+                    set_value_bitwise(compressed.body, buffer & 0x0000ffff, pivot, 16);
                     tag_overhead_width += 3;
                     pivot += 16;
                     compressed_flag = TRUE;
@@ -586,12 +591,12 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("failed\n");
                 printf("prefix 5: ");
 #endif
-                HwordBuffer lsb =  buffer & 0xffff;
-                HwordBuffer msb = (buffer & 0xffff0000) >> (2 * BYTE_BITWIDTH);
+                lsb =  buffer & 0xffff;
+                msb = (buffer & 0xffff0000) >> (2 * BYTE_BITWIDTH);
 
                 if (lsb == (ByteBuffer)(lsb & 0xff) && msb == (ByteBuffer)(msb & 0xff)) {
                     set_value_bitwise(tag_overhead.body, 5, tag_overhead_width, 3);
-                    set_value_bitwise(compressed.body, (lsb & 0xff) + (msb & 0xff00), pivot+3, 16);
+                    set_value_bitwise(compressed.body, (lsb & 0xff) + (msb & 0xff00), pivot, 16);
                     tag_overhead_width += 3;
                     pivot += 16;
                     compressed_flag = TRUE;
@@ -610,22 +615,18 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("failed\n");
                 printf("prefix 6: ");
 #endif
-                repeating_flag = FALSE;
+                compressed_flag = FALSE;
                 if (((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0x0000ff00) >> (BYTESIZ * BYTE_BITWIDTH * 1))) &&
                     ((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0x00ff0000) >> (BYTESIZ * BYTE_BITWIDTH * 2))) &&
                     ((ByteBuffer)(buffer & 0x000000ff) == (ByteBuffer)((buffer & 0xff000000) >> (BYTESIZ * BYTE_BITWIDTH * 3)))) {
-                    repeating_flag = TRUE;
-                }
-                
-                if (repeating_flag) {
-                    set_value_bitwise(tag_overhead.body, 6, tag_overhead_width, 3);
-                    set_value_bitwise(compressed.body, (ValueBuffer)initial_byte, pivot+3, 8);
-                    tag_overhead_width += 3;
-                    pivot += 8;
                     compressed_flag = TRUE;
                 }
-
+                
                 if (compressed_flag) {
+                    set_value_bitwise(tag_overhead.body, 6, tag_overhead_width, 3);
+                    set_value_bitwise(compressed.body, buffer & 0xff, pivot, 8);
+                    tag_overhead_width += 3;
+                    pivot += 8;
 #ifdef VERBOSE
                     printf("succeed\n");
 #endif
@@ -639,7 +640,7 @@ CompressionResult fpc_compression(CacheLine original) {
                 printf("prefix 7: ");
 #endif
                 set_value_bitwise(tag_overhead.body, 7, tag_overhead_width, 3);
-                set_value_bitwise(compressed.body, buffer, pivot+3, 32);
+                set_value_bitwise(compressed.body, buffer, pivot, 32);
                 tag_overhead_width += 3;
                 pivot += 32;
                 compressed_flag = TRUE;
@@ -680,9 +681,146 @@ CompressionResult fpc_compression(CacheLine original) {
 
 DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
     DecompressionResult result;
+    CacheLine original = make_memory_chunk(original_size, 0);
+    ValueBuffer data_buffer;
+    HwordBuffer lsb, msb;
+    ByteBuffer tag_buffer;
+    int32_t tag_pivot = 0, data_pivot = 0;  // bit size pivot
+    int32_t original_cursor = 0;            // byte size cursor
 
-    // 1. Zero run detector
+#ifdef VERBOSE
+    printf("Decompressing with FPC algorithm...\n");
+#endif
 
+    result.compression_type = "FPC(Frequent Pattern Compression";
+    result.compressed = compressed;
+
+    while (tag_pivot < (tag_overhead.valid_bitwidth - 1)) {
+#ifdef VERBOSE
+        printf("tag pivot: %d  data pivot: %d  original cursor: %d\n", tag_pivot, data_pivot, original_cursor);
+#endif
+        tag_buffer = get_value_bitwise(tag_overhead.body, tag_pivot, 3);
+        tag_pivot += 3;
+
+        switch (tag_buffer) {
+        case 0:
+#ifdef VERBOSE
+            printf("prefix 0: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 3);
+            data_pivot += 3;
+            for (int i = 0; i < data_buffer + 1; i++) {
+                set_value(original.body, 0x00, original_cursor, 1);
+                original_cursor += 1;
+            }
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 1:
+#ifdef VERBOSE
+            printf("prefix 1: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 4);
+            set_value(original.body, SIGNEX(data_buffer, 3), original_cursor, 4);
+            data_pivot += 4;
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 2:
+#ifdef VERBOSE
+            printf("prefix 2: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 8);
+            printf("%016llx, %lld\n", data_buffer, data_buffer);
+            set_value(original.body, SIGNEX(data_buffer, 7), original_cursor, 4);
+            data_pivot += 8;
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 3:
+#ifdef VERBOSE
+            printf("prefix 3: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 16);
+            set_value(original.body, SIGNEX(data_buffer, 15), original_cursor, 4);
+            data_pivot += 16;
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 4:
+#ifdef VERBOSE
+            printf("prefix 4: ");
+#endif
+            data_buffer = (get_value_bitwise(compressed.body, data_pivot, 16) & 0xffff);
+            set_value(original.body, data_buffer, original_cursor, 4);
+            data_pivot += 16;
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 5:
+#ifdef VERBOSE
+            printf("prefix 5: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 16);
+            lsb = SIGNEX((data_buffer & 0x00ff), 7);
+            msb = SIGNEX(((data_buffer & 0xff00) >> BYTE_BITWIDTH), 7);
+            set_value(original.body, lsb, original_cursor,     2);
+            set_value(original.body, msb, original_cursor + 2, 2);
+            data_pivot += 16;
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 6:
+#ifdef VERBOSE
+            printf("prefix 6: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 8);
+            set_value(original.body, data_buffer, original_cursor + 0, 1);
+            set_value(original.body, data_buffer, original_cursor + 1, 1);
+            set_value(original.body, data_buffer, original_cursor + 2, 1);
+            set_value(original.body, data_buffer, original_cursor + 3, 1);
+            data_pivot += 8;
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+
+        case 7:
+#ifdef VERBOSE
+            printf("prefix 7: ");
+#endif
+            data_buffer = get_value_bitwise(compressed.body, data_pivot, 32);
+            set_value(original.body, data_buffer, original_cursor, 4);
+            original_cursor += 4;
+#ifdef VERBOSE
+            printf("completed\n");
+#endif
+            break;
+        
+        default:
+            break;
+        }
+    }
+
+    result.original = original;
 
     return result;
 }

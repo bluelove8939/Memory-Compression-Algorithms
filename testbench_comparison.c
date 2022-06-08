@@ -3,17 +3,24 @@
 int main(int argc, char const *argv[]) {
     CacheLine original = file2memorychunk("./data/test.bin", 0, CACHE64SIZ);
 
-    CompressionResult result = bdi_compression(original);
-    print_compression_result(result);
-    printf("\n");
+    CompressionResult bdi_result = bdi_compression(original);
+    CompressionResult fpc_result = fpc_compression(original);
 
-    DecompressionResult dec_result = bdi_decompression(result.compressed, result.tag_overhead, result.original.size);
-    print_decompression_result(dec_result);
+    printf("====================\n");
+    printf("compression ratio: %.4f(BDI) %.4f(FPC)\n", (double)original.size / bdi_result.compressed.size, (double)original.size / fpc_result.compressed.size);
+    printf("original   (%3dBytes): ", original.size);
+    print_memory_chunk(original);
     printf("\n");
+    printf("BDI result (%3dBytes): ", bdi_result.compressed.size);
+    print_memory_chunk(bdi_result.compressed);
+    printf("\n");
+    printf("FPC result (%3dBytes): ", fpc_result.compressed.size);
+    print_memory_chunk(fpc_result.compressed);
+    printf("\n====================\n");
 
     remove_memory_chunk(original);
-    remove_compression_result(result);
-    remove_decompression_result(dec_result);
+    remove_compression_result(bdi_result);
+    remove_compression_result(fpc_result);
 
     return 0;
 }

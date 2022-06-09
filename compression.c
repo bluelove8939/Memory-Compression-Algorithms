@@ -171,7 +171,7 @@ void print_decompression_result(DecompressionResult result) {
 MemoryChunk file2memorychunk(char *filename, int offset, int size) {
 #ifdef VERBOSE
     printf("reading file \'%s\'...\n", filename);
-    printf("offset: %d  size: $d\n", offset, size);
+    printf("offset: %d  size: %d\n", offset, size);
 #endif
 
     FILE *fp = fopen(filename, "rb");

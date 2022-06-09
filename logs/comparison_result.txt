@@ -1,0 +1,207 @@
+reading file '.\data\mlp params test\mlp_2_3_layer2_params_0'...
+offset: 0  size: 64
+reading completed
+chunk: bff0181d 4e00be58 bff9f43d 0b5c3b94 bfb4b2a8 4e8a369c 3fe55255 17b88a8a 3fea0a00 026bd258 3fc8d7ef 6042d11f bfe75171 9e58a6ad bfa387e8 47f38d2e 
+Compressing with BDI algorithm...
+Zeros compression (encoding: 0)
+[ITER  0] base: 0x00  buffer: 0x2e
+iteration terminated (not compressible)
+Repeated values compression (encoding: 1)
+[ITER  0] base: 0xbfa387e847f38d2e  buffer: 0xbfa387e847f38d2e
+[ITER  8] base: 0xbfa387e847f38d2e  buffer: 0xbfe751719e58a6ad
+iteration terminated (not compressible)
+Base8-Delta1 compression (encoding: 2)
+[ITER  0] base: 0xbfa387e847f38d2e  buffer: 0xbfa387e847f38d2e  delta: 0x0000000000000000
+[ITER  1] base: 0xbfa387e847f38d2e  buffer: 0xbfe751719e58a6ad  delta: 0x0043c9895665197f
+iteration terminated (not compressible)
+Base8-Delta2 compression (encoding: 3)
+[ITER  0] base: 0xbfa387e847f38d2e  buffer: 0xbfa387e847f38d2e  delta: 0x0000000000000000
+[ITER  1] base: 0xbfa387e847f38d2e  buffer: 0xbfe751719e58a6ad  delta: 0x0043c9895665197f
+iteration terminated (not compressible)
+Base8-Delta4 compression (encoding: 4)
+[ITER  0] base: 0xbfa387e847f38d2e  buffer: 0xbfa387e847f38d2e  delta: 0x0000000000000000
+[ITER  1] base: 0xbfa387e847f38d2e  buffer: 0xbfe751719e58a6ad  delta: 0x0043c9895665197f
+iteration terminated (not compressible)
+Base4-Delta1 compression (encoding: 5)
+[ITER  0] base: 0x0000000047f38d2e  buffer: 0x0000000047f38d2e  delta: 0x0000000000000000
+[ITER  1] base: 0x0000000047f38d2e  buffer: 0x00000000bfa387e8  delta: 0x0000000077affaba
+iteration terminated (not compressible)
+Base4-Delta2 compression (encoding: 6)
+[ITER  0] base: 0x0000000047f38d2e  buffer: 0x0000000047f38d2e  delta: 0x0000000000000000
+[ITER  1] base: 0x0000000047f38d2e  buffer: 0x00000000bfa387e8  delta: 0x0000000077affaba
+iteration terminated (not compressible)
+Base2-Delta1 compression (encoding: 7)
+[ITER  0] base: 0x0000000000008d2e  buffer: 0x0000000000008d2e  delta: 0x0000000000000000
+[ITER  1] base: 0x0000000000008d2e  buffer: 0x00000000000047f3  delta: 0xffffffffffffbac5
+iteration terminated (not compressible)
+Compressing with FPC algorithm...
+[ITER] cursor position: 0  pivot: 0
+prefix 0 (zero run): failed
+buffer = 0x47f38d2e
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 4  pivot: 32
+prefix 0 (zero run): failed
+buffer = 0xbfa387e8
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 8  pivot: 64
+prefix 0 (zero run): failed
+buffer = 0x9e58a6ad
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 12  pivot: 96
+prefix 0 (zero run): failed
+buffer = 0xbfe75171
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 16  pivot: 128
+prefix 0 (zero run): failed
+buffer = 0x6042d11f
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 20  pivot: 160
+prefix 0 (zero run): failed
+buffer = 0x3fc8d7ef
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 24  pivot: 192
+prefix 0 (zero run): failed
+buffer = 0x026bd258
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 28  pivot: 224
+prefix 0 (zero run): succeed (len: 1)
+[ITER] cursor position: 29  pivot: 227
+prefix 0 (zero run): failed
+buffer = 0x8a3fea0a
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 33  pivot: 259
+prefix 0 (zero run): failed
+buffer = 0x5517b88a
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 37  pivot: 291
+prefix 0 (zero run): failed
+buffer = 0x9c3fe552
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 41  pivot: 323
+prefix 0 (zero run): failed
+buffer = 0xa84e8a36
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 45  pivot: 355
+prefix 0 (zero run): failed
+buffer = 0x94bfb4b2
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 49  pivot: 387
+prefix 0 (zero run): failed
+buffer = 0x3d0b5c3b
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 53  pivot: 419
+prefix 0 (zero run): failed
+buffer = 0x58bff9f4
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 57  pivot: 451
+prefix 0 (zero run): failed
+buffer = 0x1d4e00be
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+[ITER] cursor position: 61  pivot: 483
+prefix 0 (zero run): failed
+buffer = 0x09bff018
+prefix 1: failed
+prefix 2: failed
+prefix 3: failed
+prefix 4: failed
+prefix 5: failed
+prefix 6: failed
+prefix 7: succeed
+compression failed (compressed size: 65Bytes)
+compression completed
+====================
+compression ratio: 1.0000(BDI) 1.0000(FPC)
+original   ( 64Bytes): bff0181d 4e00be58 bff9f43d 0b5c3b94 bfb4b2a8 4e8a369c 3fe55255 17b88a8a 3fea0a00 026bd258 3fc8d7ef 6042d11f bfe75171 9e58a6ad bfa387e8 47f38d2e 
+BDI result ( 64Bytes): bff0181d 4e00be58 bff9f43d 0b5c3b94 bfb4b2a8 4e8a369c 3fe55255 17b88a8a 3fea0a00 026bd258 3fc8d7ef 6042d11f bfe75171 9e58a6ad bfa387e8 47f38d2e 
+FPC result ( 64Bytes): bff0181d 4e00be58 bff9f43d 0b5c3b94 bfb4b2a8 4e8a369c 3fe55255 17b88a8a 3fea0a00 026bd258 3fc8d7ef 6042d11f bfe75171 9e58a6ad bfa387e8 47f38d2e 
+====================

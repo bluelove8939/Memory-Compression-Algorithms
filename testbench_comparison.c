@@ -1,7 +1,13 @@
 #include "compression.h"
 
 int main(int argc, char const *argv[]) {
-    CacheLine original = file2memorychunk("./data/test.bin", 0, CACHE64SIZ);
+    char const *filename = "./data/repeating.bin";
+
+    if (argc == 2) {
+        filename = argv[1];
+    }
+
+    CacheLine original = file2memorychunk(filename, 0, CACHE64SIZ);
 
     CompressionResult bdi_result = bdi_compression(original);
     CompressionResult fpc_result = fpc_compression(original);

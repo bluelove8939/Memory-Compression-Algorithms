@@ -168,7 +168,7 @@ void print_decompression_result(DecompressionResult result) {
  *   file2cacheline: convert binary file to cacheline
  */
 
-MemoryChunk file2memorychunk(char *filename, int offset, int size) {
+MemoryChunk file2memorychunk(char const *filename, int offset, int size) {
 #ifdef VERBOSE
     printf("reading file \'%s\'...\n", filename);
     printf("offset: %d  size: %d\n", offset, size);
@@ -457,14 +457,12 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding) {
 #endif
 
         // 2-2. Check whether calculated delta value is sign-extended within d-Bytes
-        mask = 1;
-        initial = (delta & mask << (sizeof(delta) * BYTE_BITWIDTH - 1)) != 0;
-        
-        for (int j = sizeof(delta) * 8 - 1; j >= d * 8 - 1; j--) {
-            if (initial != ((delta & mask << j) != 0)) {
-                flag = FALSE;
-                break;
-            }
+        ValueBuffer byte_mask = 0x00;
+        if (d >= 1) byte_mask += 0xff;
+        if (d >= 2) byte_mask += 0xff00;
+        if (d >= 4) byte_mask += 0xffff0000;
+        if (delta != (delta & byte_mask)) {
+            flag = FALSE;
         }
 
         // 2-3 Copy shrinked delta value to compressed memory block
@@ -702,7 +700,7 @@ CompressionResult fpc_compression(CacheLine original) {
         result.tag_overhead = tag_overhead;
     } else {
 #ifdef VERBOSE
-        printf("compression failed due to size increasing (there must be an error on compressing process)\n");
+        printf("compression failed (compressed size: %dBytes)\n", compressed_size);
 #endif
         result.compressed = copy_memory_chunk(original);
         result.is_compressed = FALSE;

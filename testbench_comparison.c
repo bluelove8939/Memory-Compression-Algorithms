@@ -2,15 +2,15 @@
 
 int main(int argc, char const *argv[]) {
     char const *filename = "./data/repeating.bin";
-    char const *logfilename = "./logs/comparison_result.txt";
+    char const *logfilename = "comparison_result.txt";
 
     // freopen(logfilename,"w",stdout);
 
-    if (argc == 2) {
+    if (argc > 1) {
         filename = argv[1];
     }
 
-    CacheLine original = file2memorychunk(filename, 0, CACHE64SIZ);
+    CacheLine original = file2memorychunk(filename, 128, CACHE64SIZ);
 
     CompressionResult bdi_result = bdi_compression(original);
     CompressionResult fpc_result = fpc_compression(original);

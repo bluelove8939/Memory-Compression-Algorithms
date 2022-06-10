@@ -175,15 +175,19 @@ MemoryChunk file2memorychunk(char const *filename, int offset, int size) {
 #endif
 
     MemoryChunk chunk = make_memory_chunk(size, 0);
+    char *buffer = (char *)malloc(size * sizeof(char));
     int fd = open(filename, O_RDONLY), length = 0;
 
-    if (fd == -1) {
+    if (fd < 0) {
 #ifdef VERBOSE
-        printf("opening file '%s' failed\n", filename);
+        printf("opening file \'%s\' failed\n", filename);
 #endif
     } else {
-        length = read(fd, chunk.body, chunk.size);
+        length = read(fd, buffer, size);
     }
+
+    memcpy(chunk.body, buffer, size);
+    free(buffer);
 
 #ifdef VERBOSE
     printf("reading completed\n");

@@ -23,8 +23,8 @@
 
 // Macros for sign extension and bit masking (8Bytes buffer)
 #define SIGNEX(v, sb)  ((v) | (((v) & (1 << (sb))) ? ~((1 << (sb))-1) : 0))
-#define BITMASK(b)     (0x0000000000000001 << (b) * (BYTE_BITWIDTH))
-#define BYTEMASK(b)    (0x00000000000000ff << (b) * (BYTE_BITWIDTH))
+#define BITMASK(b)     (0x0000000000000001 << ((b) * (BYTE_BITWIDTH)))
+#define BYTEMASK(b)    (0x00000000000000ff << ((b) * (BYTE_BITWIDTH)))
 
 // Boolean expression
 #ifndef BOOLEAN_EXPR

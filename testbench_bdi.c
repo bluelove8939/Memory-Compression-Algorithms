@@ -1,5 +1,9 @@
 #include "compression.h"
 
+// Verbose parameter
+#define VERBOSE  // Comment this line not to display debug messages
+
+
 int main(int argc, char const *argv[]) {
     // Testbench for BDI algorithm
     CacheLine original = make_memory_chunk(CACHE64SIZ, 0);

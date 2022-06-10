@@ -1,5 +1,9 @@
 #include "compression.h"
 
+// Verbose parameter
+#define VERBOSE  // Comment this line not to display debug messages
+
+
 int main(int argc, char const *argv[]) {
     char const *filename = "./data/repeating.bin";
     char const *logfilename = "comparison_result.txt";

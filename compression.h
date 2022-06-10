@@ -9,7 +9,7 @@
 #include <math.h>
 
 // Verbose parameter
-#define VERBOSE  // Comment this line not to display debug messages
+// #define VERBOSE  // Comment this line not to display debug messages
 
 // Parameters for cache line size
 #define BYTE_BITWIDTH  8

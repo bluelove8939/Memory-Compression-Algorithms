@@ -681,9 +681,9 @@ CompressionResult fpc_compression(CacheLine original) {
                 tag_overhead_width += 3;
                 pivot += 32;
                 compressed_flag = TRUE;
-
+#ifdef VERBOSE
                 printf("succeed\n");
-                
+#endif              
                 break;
 
             default:

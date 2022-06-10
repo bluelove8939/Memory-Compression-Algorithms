@@ -177,15 +177,23 @@ MemoryChunk file2memorychunk(char const *filename, int offset, int size) {
     FILE *fp = fopen(filename, "rb");
     MemoryChunk chunk = make_memory_chunk(size, 0);
     ByteBuffer buffer;
+    int filesize;
 
-    fseek(fp, 0, SEEK_END);
-    if (ftell(fp) < size) return chunk;
+    // fseek(fp, 0, SEEK_END);
+    // filesize = ftell(fp);
+
+#ifdef VERBOSE
+    if (filesize < size) {
+        printf("size of the file (%dBytes) is less than %dBytes\n", ftell(fp), size);
+    }
+#endif
 
     fseek(fp, offset, SEEK_SET);
 
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; (i < size) && (i < filesize); i++) {
         fread(&buffer, sizeof(buffer), 1, fp);
         set_value(chunk.body, buffer, i, 1);
+        fp++;
     }
 
 #ifdef VERBOSE
@@ -195,6 +203,7 @@ MemoryChunk file2memorychunk(char const *filename, int offset, int size) {
     printf("\n");
 #endif
 
+    fclose(fp);
     return chunk;
 }
 

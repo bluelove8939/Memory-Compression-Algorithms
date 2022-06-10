@@ -4,7 +4,7 @@ int main(int argc, char const *argv[]) {
     char const *filename = "./data/repeating.bin";
     char const *logfilename = "./logs/comparison_result.txt";
 
-    freopen(logfilename,"w",stdout);
+    // freopen(logfilename,"w",stdout);
 
     if (argc == 2) {
         filename = argv[1];

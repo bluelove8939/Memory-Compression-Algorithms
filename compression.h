@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <stdint.h>
+#include <fcntl.h>
 #include <math.h>
 
 // Verbose parameter

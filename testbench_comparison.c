@@ -7,14 +7,20 @@
 int main(int argc, char const *argv[]) {
     char const *filename = "./data/repeating.bin";
     char const *logfilename = "comparison_result.txt";
+    int chunksize;
 
     // freopen(logfilename,"w",stdout);
 
-    if (argc > 1) {
+    if (argc > 2) {
         filename = argv[1];
+        chunksize = atoi(argv[2]);
+    } else {
+        fprintf(stderr, "[ERROR] Insufficient number of line arguments (filename and memory chunk size is required\n");
+        exit(-1);
     }
 
-    CacheLine original = file2memorychunk(filename, 128, CACHE64SIZ);
+
+    CacheLine original = file2memorychunk(filename, 9000*4, chunksize);
 
     CompressionResult bdi_result = bdi_compression(original);
     CompressionResult fpc_result = fpc_compression(original);

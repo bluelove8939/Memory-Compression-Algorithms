@@ -14,12 +14,17 @@ int main(int argc, char const *argv[]) {
 
     // freopen(logfilename,"w",stdout);
 
-    if (argc > 1) filename = argv[1];
-    if (argc > 2) chunksize = atoi(argv[2]);
+    if (argc > 2) {
+        filename = argv[1];
+        chunksize = atoi(argv[2]);
+    } else {
+        fprintf(stderr, "[ERROR] Insufficient number of line arguments (filename and memory chunk size is required\n");
+        exit(-1);
+    }
 
     FILE *fp = fopen(filename, "rb");
     fseek(fp, 0, SEEK_END);
-    int filesize = ftell(fp);
+    filesize = ftell(fp);
     fclose(fp);
 
     bdisize = 0;

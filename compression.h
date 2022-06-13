@@ -9,7 +9,7 @@
 #include <math.h>
 
 // Verbose parameter
-// #define VERBOSE  // Comment this line not to display debug messages
+#define VERBOSE  // Comment this line not to display debug messages
 
 // Parameters for cache line size
 #define BYTE_BITWIDTH  8
@@ -95,8 +95,9 @@ CacheLine bdi_compressing_unit(CacheLine original, int encoding);               
 CompressionResult fpc_compression(CacheLine original);                                                  // FPC compression algorithm
 DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // FPC decompression algorithm
 
-// Functions for C-PACK (Cache Packer) algorithm
-// CompressionResult cpack_compression(CacheLine original);                                                  // C-PACK compression algorithm
-// DecompressionResult cpack_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);  // C-PACK decompression algorithm
+// Functions for BDI algorithm with two bases
+CompressionResult bdi_twobase_compression(CacheLine original);                                                          // BDI compression algorithm with two bases
+DecompressionResult bdi_twobase_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);          // BDI decompression algorithm with two bases
+Bool bdi_twobase_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *tag_overhead, int encoding);  // Compressing Unit (CU)
 
 #endif

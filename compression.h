@@ -101,8 +101,9 @@ DecompressionResult bdi_twobase_decompression(CacheLine compressed, MetaData tag
 Bool bdi_twobase_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *tag_overhead, int encoding);  // Compressing Unit (CU)
 
 // Functions for BDI algorithm with zeros run detection
-CompressionResult bdi_zr_compression(CacheLine original);                                                          // BDI compression algorithm with zeros run detection
-DecompressionResult bdi_zr_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);          // BDI decompression algorithm with zeros run detection
-Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *tag_overhead, int encoding);  // Compressing Unit (CU)
+CompressionResult bdi_zr_compression(CacheLine original);                                                                                 // BDI compression algorithm with zeros run detection
+DecompressionResult bdi_zr_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);                                 // BDI decompression algorithm with zeros run detection
+Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *shifting, MemoryChunk *tag_overhead, int encoding);  // Compressing Unit (CU)
+MemoryChunk bdi_zr_detector(CacheLine original, int encoding);                                                                            // Zeros run detector
 
 #endif

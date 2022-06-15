@@ -864,6 +864,22 @@ DecompressionResult fpc_decompression(CacheLine compressed, MetaData tag_overhea
 }
 
 
+/* 
+ * Functions for BDI algorithm with two bases
+ *   BDI(Base Delta Immediate) algorithm is a compression algorithm usually used to compress
+ *   memory blocks e.g. cache line. In this section, you can check newly designed BDI algorithm
+ *   with two bases.
+ *
+ * Functions:
+ *   bdi_twobase_compression: BDI compression algorithm with two bases
+ *   bdi_twobase_decompression : BDI decompression algorithm with two bases
+ *   bdi_twobase_compressing_unit: actually compresses given cacheline with certain encoding
+ * 
+ * Note
+ *   This algorithm is reference to the paper of PACT12 conference
+ *   url: https://users.ece.cmu.edu/~omutlu/pub/bdi-compression_pact12.pdf
+ */
+
 CompressionResult bdi_twobase_compression(CacheLine original) {
     CompressionResult result;
     MetaData tag_overhead = make_memory_chunk(2, 0);  // 2Bytes of tag overhead with its valid bitwidth of 11bits
@@ -1031,12 +1047,12 @@ Bool bdi_twobase_compressing_unit(CacheLine original, CacheLine *compressed, Mem
 #ifdef VERBOSE
         printf("[ITER %2d] base: 0x%016llx  buffer: 0x%016llx  delta: 0x%016llx\n", i/k, base, buffer, delta);
 #endif
-        if (SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1) == delta) {
+        if (SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1) == SIGNEX(delta, (k * BYTE_BITWIDTH) - 1)) {
 #ifdef VERBOSE
             printf(">>> delta is %dByte sign extended\n", d);
 #endif
             set_value(compressed->body, delta, k + (j * d), d);
-        } else if (SIGNEX(buffer & mask, d * (BYTE_BITWIDTH) - 1) == buffer) {
+        } else if (SIGNEX(buffer & mask, d * (BYTE_BITWIDTH) - 1) == SIGNEX(buffer, (k * BYTE_BITWIDTH) - 1)) {
 #ifdef VERBOSE
             printf(">>> delta is not %dByte sign extended but buffer is %dByte sign extended\n", d, d);
 #endif
@@ -1069,6 +1085,364 @@ Bool bdi_twobase_compressing_unit(CacheLine original, CacheLine *compressed, Mem
 }
 
 DecompressionResult bdi_twobase_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
+    CacheLine original = make_memory_chunk(original_size, 0);
+    DecompressionResult result;
+    ValueBuffer base, buffer, mask=1;
+    int k, d;
+    int encoding = get_value_bitwise(tag_overhead.body, 0, 4);
+    int segment_num = get_value_bitwise(tag_overhead.body, 4, 7);
+    int selection, sel_mask = 1;
+
+#ifdef VERBOSE
+    printf("Decompressing with BDI algorithm...\n");
+    printf("encoding: %d\n", encoding);
+    printf("segment pointer: %d\n", segment_num);
+#endif
+
+    result.compressed = compressed;
+    result.compression_type = "BDI(Base Delta Immediate) with two bases";
+
+    switch (encoding) {
+    case 0:  // Zero values
+#ifdef VERBOSE
+        printf("Zeros compression (encoding: %d)\n", encoding);
+#endif
+        for (int i = 0; i < original.size; i++) {
+            set_value(original.body, 0, i, 1);
+        }
+        result.original = original;
+        result.is_decompressed = TRUE;
+#ifdef VERBOSE
+        printf("decompression completed\n");
+#endif
+        return result;
+    
+    case 1:  // Repeated values
+#ifdef VERBOSE
+        printf("Repeated values compression (encoding: %d)\n", encoding);
+#endif
+        base = get_value(compressed.body, 0, 8);
+        for (int i = 0; i < original.size; i += 8) {
+            set_value(original.body, base, i, 8);
+        }
+        result.original = original;
+        result.is_decompressed = TRUE;
+#ifdef VERBOSE
+        printf("compression completed\n");
+#endif
+        return result;
+
+    case 2:  // Base8-delta1
+        k = 8; 
+        d = 1;
+        break;
+    
+    case 3:  // Base8-delta2
+        k = 8; 
+        d = 2;
+        break;
+
+    case 4:  // Base8-delta4
+        k = 8; 
+        d = 4;
+        break;
+
+    case 5:  // Base4-delta1
+        k = 4; 
+        d = 1;
+        break;
+
+    case 6:  // Base4-delta2
+        k = 4; 
+        d = 2;
+        break;
+    
+    case 7:  // Base2-delta1
+        k = 2; 
+        d = 1;
+        break;
+    
+    default:
+        result.original = copy_memory_chunk(compressed);
+        remove_memory_chunk(original);
+        result.is_decompressed = FALSE;
+        return result;
+    }
+
+    base = get_value(compressed.body, 0, k);
+    selection = get_value_bitwise(tag_overhead.body, 11, original_size / k);
+
+    for (int i = 0; i < original.size / k; i++) {
+        buffer = get_value(compressed.body, k + (d*i), d);
+        if (selection & (sel_mask << i))
+            set_value(original.body, SIGNEX(buffer, (d * BYTE_BITWIDTH)-1), i * k, k);
+        else
+            set_value(original.body, SIGNEX(buffer, (d * BYTE_BITWIDTH)-1) + SIGNEX(base, (k * BYTE_BITWIDTH)-1), i * k, k);
+    }
+    result.original = original;
+    result.is_decompressed = TRUE;
+    return result;
+}
+
+
+/* 
+ * Functions for BDI algorithm with zeros run detection
+ *   BDI(Base Delta Immediate) algorithm is a compression algorithm usually used to compress
+ *   memory blocks e.g. cache line. In this section, you can check newly designed BDI algorithm
+ *   with zeros run(ZR).
+ *
+ * Functions:
+ *   bdi_zr_compression: BDI compression algorithm with zeros run detection
+ *   bdi_zr_decompression : BDI decompression algorithm with zeros run detection
+ *   bdi_zr_compressing_unit: actually compresses given cacheline with certain encoding
+ * 
+ * Note
+ *   This algorithm is reference to the paper of PACT12 conference
+ *   url: https://users.ece.cmu.edu/~omutlu/pub/bdi-compression_pact12.pdf
+ */
+
+CompressionResult bdi_zr_compression(CacheLine original) {
+    CompressionResult result;
+    MetaData tag_overhead = make_memory_chunk(2, 0);  // 2Bytes of tag overhead with its valid bitwidth of 11bits
+    CacheLine compressed = make_memory_chunk(original.size, 0);  // initialize compressed cacheline with the size of original cacheline
+    Bool is_compressed;
+
+#ifdef VERBOSE
+    printf("Compressing with BDI algorithm with two bases...\n");
+#endif
+
+    result.compression_type = "BDI(Base Delta Immediate) with two bases";
+    result.original = original;
+
+    for (int encoding = 0; encoding < 16; encoding++) {
+        is_compressed = bdi_zr_compressing_unit(original, &compressed, &tag_overhead, encoding);
+        if (is_compressed == TRUE) {
+            result.is_compressed = TRUE;
+            break;
+        }
+    }
+
+    result.compressed = compressed;
+    result.tag_overhead = tag_overhead;
+
+    if (result.is_compressed == FALSE) {
+        remove_memory_chunk(compressed);
+        result.compressed = copy_memory_chunk(original);
+        result.tag_overhead.valid_bitwidth = 0;
+    }
+
+    return result;
+}
+
+Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *tag_overhead, int encoding) {
+    ValueBuffer buffer, base, delta, mask;
+    int k, d, segment_num, compressed_size, zero_cnt;
+    Bool is_compressed = FALSE;
+
+    switch (encoding) {
+    case 0:  // Zeros (encoding 0)
+#ifdef VERBOSE
+        printf("encoding %d: ", encoding);
+#endif
+        is_compressed = TRUE;
+        for (int i = 0; i < original.size; i++) {
+            buffer = get_value(original.body, i, 1);
+            if (buffer != 0) {
+                is_compressed = FALSE;
+                break;
+            }
+        }
+
+        if (is_compressed) {
+#ifdef VERBOSE
+            printf("succeed\n");
+#endif
+            compressed->size = 1;
+            compressed->valid_bitwidth = 8;
+            set_value_bitwise(tag_overhead->body, 0, encoding, 4);
+            set_value_bitwise(tag_overhead->body, 1, 4, 7);
+            tag_overhead->valid_bitwidth = 11;
+            return TRUE;
+        }
+#ifdef VERBOSE
+        else 
+            printf("failed\n");
+#endif
+
+        return FALSE;
+    
+    case 1:  // Repeating values (encoding 1)
+#ifdef VERBOSE
+        printf("encoding %d: ", encoding);
+#endif
+        is_compressed = TRUE;
+        base = get_value(original.body, 0, 8);
+        for (int i = 0; i < original.size; i += 8) {
+            buffer = get_value(original.body, i, 8);
+            if (buffer != base) {
+                is_compressed = FALSE;
+                break;
+            }
+        }
+
+        if (is_compressed) {
+            compressed->size = 8;
+            compressed->valid_bitwidth = 64;
+            set_value(compressed->body, base, 0, 8);
+            set_value_bitwise(tag_overhead->body, 0, encoding, 4);
+            set_value_bitwise(tag_overhead->body, 1, 4, 7);
+            tag_overhead->valid_bitwidth = 11;
+#ifdef VERBOSE
+            printf("succeed\n");
+#endif
+        }
+#ifdef VERBOSE
+        else
+            printf("failed\n");
+#endif
+
+        return FALSE;
+
+    case 2:  // Base8-delta1 (encoding 2)
+        k = 8;
+        d = 1;
+
+        break;
+
+    case 3:  // Base8-delta2 (encoding 3)
+        k = 8;
+        d = 2;
+
+        break;
+
+    case 4:  // Base8-delta4 (encoding 4)
+        k = 8;
+        d = 4;
+
+        break;
+
+    case 5:  // Base4-delta1 (encoding 5)
+        k = 4;
+        d = 1;
+
+        break;
+    
+    case 6:  // Base4-delta2 (encoding 6)
+        k = 4;
+        d = 2;
+
+        break;
+
+    case 7:  // Base2-delta1 (encoding 7)
+        k = 2;
+        d = 1;
+
+        break;
+    
+    default:
+        k = 8;
+        d = 1;
+
+        break;
+    }
+
+#ifdef VERBOSE
+    printf("encoding %d (Base%d-Delta%d)\n", encoding, k, d);
+#endif
+
+    compressed_size = 0;
+    is_compressed = TRUE;
+    mask = 0;
+
+    if (d >= 1) mask += 0xff;
+    if (d >= 2) mask += 0xff00;
+    if (d >= 4) mask += 0xffff0000;
+
+    // 0. Reading base value and check if there's consecutve zeros
+    base = get_value(original.body, 0, k);
+    for (zero_cnt = 0; zero_cnt < k; zero_cnt++) {
+        if ((base & ((ValueBuffer)0xff << (zero_cnt * BYTE_BITWIDTH))) != 0) 
+            break;
+    }
+
+#ifdef VERBOSE
+        printf("[INITIAL] original base: 0x%016llx\n", base);
+#endif
+
+    if (zero_cnt == 0) {
+        set_value_bitwise(compressed->body, 0, 0, 1);
+        set_value_bitwise(compressed->body, base, 1, k);
+        compressed_size += (k * BYTE_BITWIDTH) + 1;
+    } else {
+#ifdef VERBOSE
+        printf(">>> %d consecutive zero detected at base\n", zero_cnt);
+#endif
+        base = SIGNEX(base >> (zero_cnt * BYTE_BITWIDTH), ((k - zero_cnt) * BYTE_BITWIDTH) - 1);
+        set_value_bitwise(compressed->body, 1, 0, 1);
+        set_value_bitwise(compressed->body, zero_cnt-1, 1, 3);
+        set_value_bitwise(compressed->body, base, 4, k * BYTE_BITWIDTH);
+        compressed_size += (k * BYTE_BITWIDTH) + 4;
+    }
+
+    for (int i = 0; i < original.size; i += k) {
+        // 1. Read k-bytes from the original cacheline
+        buffer = get_value(original.body, i, k);
+#ifdef VERBOSE
+        printf("[ITER %2d] base: 0x%016llx  buffer: 0x%016llx\n", i/k, base, buffer);
+#endif
+
+        // 2. Check if there's any consecutive zeros
+        for (zero_cnt = 0; zero_cnt < k; zero_cnt++) {
+            if ((buffer & ((ValueBuffer)0xff << (zero_cnt * BYTE_BITWIDTH))) != 0) 
+                break;
+        }
+
+        if (zero_cnt != 0) {
+#ifdef VERBOSE
+            printf(">>> %d consecutive zero detected at buffer\n", zero_cnt);
+#endif
+            buffer = SIGNEX(buffer >> (zero_cnt * BYTE_BITWIDTH), ((k - zero_cnt) * BYTE_BITWIDTH) - 1);
+            set_value_bitwise(compressed->body, 1, compressed_size, 1);
+            set_value_bitwise(compressed->body, zero_cnt-1, compressed_size+1, 3);
+            compressed_size += 4;
+        } else {
+            set_value_bitwise(compressed->body, 0, compressed_size, 1);
+            compressed_size += 1;
+        }
+
+        delta = buffer - base;
+#ifdef VERBOSE
+        printf(">>> delta: 0x%016llx\n", delta);
+#endif
+        if (SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1) == SIGNEX(delta, (d * BYTE_BITWIDTH) - 1)) {
+            set_value_bitwise(compressed->body, delta, compressed_size, d * BYTE_BITWIDTH);
+            compressed_size += (d * BYTE_BITWIDTH);
+        } else {
+            is_compressed = FALSE;
+            break;
+        }
+    }
+
+    if (is_compressed == TRUE) {
+        compressed->size = ceil((double)compressed_size / BYTE_BITWIDTH);
+        compressed->valid_bitwidth = compressed_size;
+        set_value_bitwise(tag_overhead->body, encoding, 0, 4);
+        set_value_bitwise(tag_overhead->body, ceil((double)compressed->size / 8), 4, 7);
+        tag_overhead->valid_bitwidth = 11;
+#ifdef VERBOSE
+        printf("encoding %d succeed (size: %dBytes)\n", encoding, compressed->size);
+#endif
+    }
+#ifdef VERBOSE
+    else {
+        printf("encoding %d failed\n", encoding);
+    }
+#endif
+
+    return is_compressed;
+}
+
+DecompressionResult bdi_zr_decompression(CacheLine compressed, MetaData tag_overhead, int original_size) {
     CacheLine original = make_memory_chunk(original_size, 0);
     DecompressionResult result;
     ValueBuffer base, buffer, mask=1;

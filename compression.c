@@ -45,8 +45,7 @@ ValueBuffer get_value_bitwise(ByteArr arr, int offset, int size) {
         output_bit_idx = i;
         val += ((ValueBuffer)arr[block_idx] & (mask << (block_bit_idx))) >> block_bit_idx << output_bit_idx;
     }
-    if (size * BYTE_BITWIDTH == 64) return val;
-    return SIGNEX(val, size - 1);
+    return val;
 }
 
 
@@ -1220,9 +1219,14 @@ CompressionResult bdi_zr_compression(CacheLine original) {
 
     for (int encoding = 0; encoding < 8; encoding++) {
         shifting = bdi_zr_detector(original, encoding);
-        printf("encoding %d: (%2dBytes) ", encoding, shifting.size);
+#ifdef VERBOSE
+        printf("[INITIAL] compressing with encoding %d\n", encoding);
+        printf("shifting: ");
         print_memory_chunk_bitwise(shifting);
         printf("\n");
+#endif
+        is_compressed = bdi_zr_compressing_unit(original, &compressed, &shifting, &tag_overhead, encoding);
+        if (is_compressed) break;
         remove_memory_chunk(shifting);
     }
 
@@ -1278,14 +1282,14 @@ MemoryChunk bdi_zr_detector(CacheLine original, int encoding) {
     zeros_cnt = 0;
 
     for (zeros_cnt = 0; zeros_cnt < k; zeros_cnt++) {
-        if ((base & (0xff << (zeros_cnt * BYTE_BITWIDTH))) != 0) 
+        if ((base & ((ValueBuffer)0xff << (zeros_cnt * BYTE_BITWIDTH)))) {
             break;
+        }
     }
 
     if (zeros_cnt > 0) {
         set_value_bitwise(shifting.body, 1, 0, 1);
         set_value_bitwise(shifting.body, zeros_cnt-1, 1, shift_block_size-1);
-        offset += shift_block_size;
     }
 
     offset += shift_block_size;
@@ -1294,18 +1298,175 @@ MemoryChunk bdi_zr_detector(CacheLine original, int encoding) {
         buffer = get_value(original.body, i, k);
 
         for (zeros_cnt = 0; zeros_cnt < k; zeros_cnt++) {
-            if ((base & (0xff << (zeros_cnt * BYTE_BITWIDTH))) != 0) 
+            if ((buffer & ((ValueBuffer)0xff << (zeros_cnt * BYTE_BITWIDTH)))) {
                 break;
+            } 
         }
 
         if (zeros_cnt > 0) {
-            set_value_bitwise(shifting.body, 1, 0, 1);
-            set_value_bitwise(shifting.body, zeros_cnt-1, 1, shift_block_size-1);
+            set_value_bitwise(shifting.body, 1, offset, 1);
+            set_value_bitwise(shifting.body, zeros_cnt-1, offset+1, shift_block_size-1);
             offset += shift_block_size;
         }
+
+        printf("[TEST] buffer: 0x%016llx  zeros_cnt: %d\n", buffer, zeros_cnt);
 
         offset += shift_block_size;
     }
 
     return shifting;
+}
+
+Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *shifting, MemoryChunk *tag_overhead, int encoding) {
+    ValueBuffer base, buffer, delta, mask;
+    int k, d, zeros_cnt, zeros_cnt_bitwidth, offset, shift_bit, compressed_size;
+
+    switch (encoding) {
+    case 0:
+        for (int i = 0; i < original.size; i += 1) {
+            if (original.body[i] != 0)
+                return FALSE;
+        }
+
+        compressed->body[0] = 0;
+        compressed->size = 1;
+        compressed->valid_bitwidth = 8;
+        return TRUE;
+
+    case 1:
+        base = get_value(original.body, 0, 8);
+        for (int i = 0; i < original.size; i += 8) {
+            buffer = get_value(original.body, i, 8);
+            if (base != buffer)
+                return FALSE;
+        }
+
+        set_value(compressed->body, base, 0, 8);
+        compressed->size = 8;
+        compressed->valid_bitwidth = 8;
+        return TRUE;
+    
+    case 2:
+        k = 8;
+        d = 1;
+        zeros_cnt_bitwidth = 3;
+        break;
+
+    case 3:
+        k = 4;
+        d = 1;
+        zeros_cnt_bitwidth = 2;
+        break;
+
+    case 4:
+        k = 2;
+        d = 1;
+        zeros_cnt_bitwidth = 1;
+        break;
+
+    case 5:
+        k = 8;
+        d = 2;
+        zeros_cnt_bitwidth = 3;
+        break;
+
+    case 6:
+        k = 4;
+        d = 2;
+        zeros_cnt_bitwidth = 2;
+        break;
+
+    case 7:
+        k = 8;
+        d = 4;
+        zeros_cnt_bitwidth = 3;
+        break;
+    
+    default:
+        break;
+    }
+
+    offset = 0;
+    compressed_size = shifting->size;
+    mask = 0;
+
+    if (d >= 1) mask += 0xff;
+    if (d >= 2) mask += 0xff00;
+    if (d >= 4) mask += 0xffff0000;
+
+    base = get_value(original.body, 0, k);
+    shift_bit = get_value_bitwise(shifting->body, 0, 1);
+
+#ifdef VERBOSE
+    printf("[ITER 0] base: 0x%016llx  shift_bit: %d\n", base, shift_bit != 0);
+#endif
+
+    if (shift_bit != 0) {
+        zeros_cnt = get_value_bitwise(shifting->body, 1, zeros_cnt_bitwidth);
+        base = base >> ((zeros_cnt + 1) * BYTE_BITWIDTH);
+#ifdef VERBOSE
+    printf(">>> shift base %dBytes -> base: 0x%016llx\n", zeros_cnt+1, base);
+    printf(">>> current compressed size: %dBytes  shifting offset: %dbits\n", compressed_size, offset);
+#endif
+        set_value(compressed->body, base, compressed_size, k);
+        compressed_size += k;
+    }
+
+    offset += 1 + zeros_cnt_bitwidth;
+
+    for (int i = k; i < original.size; i += k) {
+        buffer = get_value(original.body, i, k);
+        shift_bit = get_value_bitwise(shifting->body, offset, 1);
+#ifdef VERBOSE
+        printf("[ITER %d] buffer: 0x%016llx  shift_bit: %d\n", i/k, buffer, shift_bit != 0);
+#endif
+
+        if (shift_bit != 0) {
+            zeros_cnt = get_value_bitwise(shifting->body, offset+1, zeros_cnt_bitwidth);
+            if (zeros_cnt == (k - 1)) {
+#ifdef VERBOSE
+                printf(">>> do not save delta due to zero value\n");
+                printf(">>> current compressed size: %dBytes  shifting offset: %dbits\n", compressed_size, offset);
+#endif
+                offset += zeros_cnt_bitwidth + 1;
+                continue;
+            }
+            buffer = buffer >> ((zeros_cnt + 1) * BYTE_BITWIDTH);
+#ifdef VERBOSE
+            printf(">>> shift buffer %dBytes -> base: 0x%016llx\n", zeros_cnt+1, base);
+            printf(">>> current compressed size: %dBytes  shifting offset: %dbits\n", compressed_size, offset);
+#endif
+        }
+
+        offset += zeros_cnt_bitwidth + 1;
+        delta = buffer - base;
+
+#ifdef VERBOSE
+        printf("base: 0x%016llx  buffer: 0x%016llx  delta: 0x%016llx\n", base, buffer, delta);
+#endif
+        if (delta == SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1)) {
+            set_value(compressed->body, delta, compressed_size, d);
+            compressed_size += d;
+        } else {
+#ifdef VERBOSE
+            printf("failed\n");
+#endif
+            return FALSE;
+        }
+    }
+
+    for (int i = 0; i < shifting->size; i++) 
+        set_value(compressed->body, shifting->body[i], i, 1);
+    compressed->size = compressed_size;
+    compressed->valid_bitwidth = compressed_size * BYTE_BITWIDTH;
+
+    set_value_bitwise(tag_overhead->body, encoding, 0, 4);
+    set_value_bitwise(tag_overhead->body, ceil((double)compressed_size / 8), 4, 7);
+    tag_overhead->size = 2;
+    tag_overhead->valid_bitwidth = 11;
+
+#ifdef VERBOSE
+    printf("succeed\n");
+#endif
+    return TRUE;
 }

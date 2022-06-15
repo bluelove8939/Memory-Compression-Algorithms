@@ -1306,10 +1306,9 @@ MemoryChunk bdi_zr_detector(CacheLine original, int encoding) {
         if (zeros_cnt > 0) {
             set_value_bitwise(shifting.body, 1, offset, 1);
             set_value_bitwise(shifting.body, zeros_cnt-1, offset+1, shift_block_size-1);
-            offset += shift_block_size;
         }
 
-        printf("[TEST] buffer: 0x%016llx  zeros_cnt: %d\n", buffer, zeros_cnt);
+        // printf("[TEST] buffer: 0x%016llx  zeros_cnt: %d  offset: %d\n", buffer, zeros_cnt, offset);
 
         offset += shift_block_size;
     }
@@ -1442,7 +1441,7 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
         delta = buffer - base;
 
 #ifdef VERBOSE
-        printf("base: 0x%016llx  buffer: 0x%016llx  delta: 0x%016llx\n", base, buffer, delta);
+        printf("base: 0x%016llx  buffer: 0x%016llx  delta: 0x%016llx  extended: 0x%016llx\n", base, buffer, delta, SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1));
 #endif
         if (delta == SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1)) {
             set_value(compressed->body, delta, compressed_size, d);

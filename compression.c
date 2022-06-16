@@ -1446,6 +1446,9 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
         if (delta == SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1)) {
             set_value(compressed->body, delta, compressed_size, d);
             compressed_size += d;
+#ifdef VERBOSE
+            printf(">>> current compressed size: %dBytes  shifting offset: %dbits\n", compressed_size, offset);
+#endif
         } else {
 #ifdef VERBOSE
             printf("failed\n");

@@ -78,8 +78,12 @@ MemoryChunk make_memory_chunk(int size, int initial) {
 MemoryChunk copy_memory_chunk(MemoryChunk target) {
     MemoryChunk chunk;
     chunk.size = target.size;
-    chunk.body = (char *)malloc(target.size);
-    memcpy(chunk.body, target.body, chunk.size);
+    chunk.valid_bitwidth = target.valid_bitwidth;
+    chunk.body = (ByteArr)malloc(target.size);
+    memcpy(chunk.body, target.body, target.size);
+    // printf("copy result - size: %dBytes valid: %dbits content: ", chunk.size, chunk.valid_bitwidth);
+    // print_memory_chunk(chunk);
+    // printf("\n");
     return chunk;
 }
 
@@ -1318,6 +1322,8 @@ MemoryChunk bdi_zr_detector(CacheLine original, int encoding) {
 
 Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *shifting, MemoryChunk *tag_overhead, int encoding) {
     ValueBuffer base, buffer, delta, mask;
+    MemoryChunk extendinfo;
+    int extendinfo_offset;
     int k, d, zeros_cnt, zeros_cnt_bitwidth, offset, shift_bit, compressed_size;
 
     switch (encoding) {
@@ -1387,6 +1393,7 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
 
     offset = 0;
     compressed_size = shifting->size;
+    extendinfo = make_memory_chunk(ceil((double)original.size / (k * BYTE_BITWIDTH)), 0);
     mask = 0;
 
     if (d >= 1) mask += 0xff;
@@ -1412,6 +1419,7 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
     }
 
     offset += 1 + zeros_cnt_bitwidth;
+    extendinfo_offset = 1;
 
     for (int i = k; i < original.size; i += k) {
         buffer = get_value(original.body, i, k);
@@ -1443,11 +1451,18 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
 #ifdef VERBOSE
         printf("base: 0x%016llx  buffer: 0x%016llx  delta: 0x%016llx  extended: 0x%016llx\n", base, buffer, delta, SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1));
 #endif
-        if (delta == SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1)) {
+        if ((delta & (~mask)) == 0) {
             set_value(compressed->body, delta, compressed_size, d);
             compressed_size += d;
 #ifdef VERBOSE
-            printf(">>> current compressed size: %dBytes  shifting offset: %dbits\n", compressed_size, offset);
+            printf(">>> current compressed size: %dBytes  shifting offset: %dbits (extended with zero pad)\n", compressed_size, offset);
+#endif
+        } else if ((delta & (~mask)) == (~mask)) {
+            set_value_bitwise(extendinfo.body, 1, extendinfo_offset, 1);
+            set_value(compressed->body, delta, compressed_size, d);
+            compressed_size += d;
+#ifdef VERBOSE
+            printf(">>> current compressed size: %dBytes  shifting offset: %dbits (extended with 1)\n", compressed_size, offset);
 #endif
         } else {
 #ifdef VERBOSE
@@ -1455,10 +1470,20 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
 #endif
             return FALSE;
         }
+
+        extendinfo_offset += 1;
     }
 
+    // copy extension information to compressed array
+    for (int i = 0; i < extendinfo.size; i++)
+        set_value(compressed->body, extendinfo.body[i], i + compressed_size, 1);
+    compressed_size += extendinfo.size;
+    remove_memory_chunk(extendinfo);
+
+    // copy shifting information to compressed array
     for (int i = 0; i < shifting->size; i++) 
         set_value(compressed->body, shifting->body[i], i, 1);
+
     compressed->size = compressed_size;
     compressed->valid_bitwidth = compressed_size * BYTE_BITWIDTH;
 
@@ -1472,3 +1497,387 @@ Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryCh
 #endif
     return TRUE;
 }
+
+
+/* 
+ * Other algorithms on test
+ *   1. Zero Vector Compression
+ *      This algorithm includes 1bit index for extracting zero byte (expecting good compression ratio on sparse dataset)
+ *   2. Zeros Run Compression
+ *      This algorithm is zeros run compression algorithm in FPC
+ *
+ * Functions:
+ *   zero_vec_compression: zero vector compression
+ *   zeros_run_compression: zeros run compression
+ */
+
+CompressionResult zero_vec_compression(CacheLine original) {
+    CompressionResult result;
+    CacheLine compressed;
+    const double threshold = 0.5;
+    int zero_cnt, index, offset = original.size;  // in bits
+
+#ifdef VERBOSE
+    printf("Compressing with zero vector algorithm...\n");
+#endif
+
+    result.compression_type = "Zero Vector algorithm";
+    result.original = original;
+
+    zero_cnt = 0;
+    for (index = 0; index < original.size; index++) {
+        if (original.body[index] == 0x00)
+            zero_cnt++;
+    }
+
+    if (((double)zero_cnt / original.size) < threshold) {
+#ifdef VERBOSE
+        printf("failed due to insufficient sparcity of the memory chunk\n");
+#endif  
+        compressed = copy_memory_chunk(original);
+#ifdef VERBOSE
+        printf("compressed size: %dBytes\n", compressed.size);
+#endif
+        result.is_compressed = FALSE;
+        result.compressed = compressed;
+        // result.tag_overhead = make_memory_chunk(1, 0);
+        // result.tag_overhead.size = 0;
+        // result.tag_overhead.valid_bitwidth = 0;
+
+        return result;
+    }
+
+    compressed = make_memory_chunk(original.size, 0);
+
+    // generating bit indexes
+    for (index = 0; index < original.size; index++) {
+#ifdef VERBOSE
+        printf("original.body[%2d] = 0x%02x (is_zero: %5s, offset: %2d, index: %2d)\n", index, 
+                                                               original.body[index], 
+                                                               original.body[index] == 0 ? "true" : "false",
+                                                               offset, index);
+#endif
+        if (original.body[index] != 0x00) {
+            set_value_bitwise(compressed.body, 1, index, 1);
+            set_value_bitwise(compressed.body, original.body[index], offset, BYTE_BITWIDTH);
+            offset += BYTE_BITWIDTH;
+        }
+    }
+
+    compressed.size = offset / BYTE_BITWIDTH;
+    compressed.valid_bitwidth =  offset;
+    result.compressed = compressed;
+    result.is_compressed = TRUE;
+    // result.tag_overhead = make_memory_chunk(1, 0);
+    // result.tag_overhead.size = 0;
+    // result.tag_overhead.valid_bitwidth = 0;
+
+#ifdef VERBOSE
+    printf("succeed\n");
+#endif
+
+    return result;
+}
+
+CompressionResult zeros_run_compression(CacheLine original) {
+    CompressionResult result;
+    CacheLine compressed = make_memory_chunk(original.size, 0);
+    ValueBuffer buffer;
+    int offset = 0, zeros_cnt = 0;
+    Bool flag = TRUE;
+
+#ifdef VERBOSE
+    printf("Compressing with zeros run algorithm...\n");
+#endif
+
+    result.compression_type = "Zeros Run algorithm";
+    result.original = original;
+
+    for (int i = 0; (i < original.size) && flag; i++) {
+        buffer = get_value(original.body, i, 1);
+#ifdef VERBOSE
+        printf("[ITER %2d] buffer: 0x%08x offset: %3d zeros_cnt: %d\n", i, (ByteBuffer)buffer, offset, zeros_cnt);
+#endif
+
+        if (buffer == 0) {
+            zeros_cnt += 1;
+        } else {
+            if (zeros_cnt != 0) {
+                if ((original.size * BYTE_BITWIDTH) - offset < 4) {
+                    flag = FALSE;
+                    break;
+                }
+
+                set_value_bitwise(compressed.body, 1, offset, 1);
+                set_value_bitwise(compressed.body, zeros_cnt-1, offset+1, 3);
+                offset += 4;
+                zeros_cnt = 0;
+            }
+
+            if ((original.size * BYTE_BITWIDTH) - offset < (BYTE_BITWIDTH + 1)) {
+                flag = FALSE;
+                break;
+            }
+
+            set_value_bitwise(compressed.body, buffer, offset+1, BYTE_BITWIDTH);
+            offset += BYTE_BITWIDTH+1;
+        }
+
+        if (zeros_cnt == 8) {
+            if ((original.size * BYTE_BITWIDTH) - offset < 4) {
+                flag = FALSE;
+                break;
+            }
+
+            set_value_bitwise(compressed.body, 1, offset, 1);
+            set_value_bitwise(compressed.body, 7, offset+1, 3);
+            offset += 4;
+            zeros_cnt = 0;
+        }
+    }
+
+    if (zeros_cnt != 0) {
+        if ((original.size * BYTE_BITWIDTH) - offset < 4) {
+            flag = FALSE;
+        } else {
+            set_value_bitwise(compressed.body, 1, offset, 1);
+            set_value_bitwise(compressed.body, zeros_cnt-1, offset, 3);
+            offset += 4;
+            zeros_cnt = 0;
+        }
+    }
+
+    if (flag == FALSE) {
+#ifdef VERBOSE
+        printf("failed (compression increases the size)\n");
+#endif
+
+        remove_memory_chunk(compressed);
+        result.compressed = copy_memory_chunk(original);
+        result.is_compressed = FALSE;
+        result.tag_overhead = make_memory_chunk(1, 0);
+        result.tag_overhead.size = 0;
+        result.tag_overhead.valid_bitwidth = 0;
+
+        return result;
+    }
+
+#ifdef VERBOSE
+    printf("succeed (offset: %d)\n", offset);
+#endif
+
+    compressed.size = ceil((double)offset / BYTE_BITWIDTH);
+    compressed.valid_bitwidth = offset;
+    result.compressed = compressed;
+    result.tag_overhead = make_memory_chunk(1, 0);
+    result.tag_overhead.size = 0;
+    result.tag_overhead.valid_bitwidth = 0;
+    result.is_compressed = TRUE;
+
+    return result;
+}
+
+
+/* 
+ * Functions for BDI algorithm with zero base detection
+ *   BDI(Base Delta Immediate) algorithm is a compression algorithm usually used to compress
+ *   memory blocks e.g. cache line. In this section, you can check newly designed BDI algorithm
+ *   with zero base encoding. This algorithm encodes zero data blocks into 1bit encoding
+ *
+ * Functions:
+ *   bdi_ze_compression: BDI compression algorithm with zero base encoding
+ *   bdi_ze_compressing_unit: Compressing unit for BDI algorithm with zero base encoding
+ * 
+ * Note
+ *   This algorithm is reference to the paper of PACT12 conference
+ *   url: https://users.ece.cmu.edu/~omutlu/pub/bdi-compression_pact12.pdf
+ */
+
+CompressionResult bdi_ze_compression(CacheLine original) {
+    CompressionResult result;
+    CacheLine compressed = make_memory_chunk(original.size, 0);
+    MetaData tag_overhead = make_memory_chunk(2, 0);
+    Bool is_compressed;
+
+#ifdef VERBOSE
+    printf("Compressing with BDI algorithm with zero base encoding...\n");
+#endif
+
+    result.compression_type = "BDI(Base Delta Immediate) with zero base encoding";
+    result.original = original;
+
+    for (int encoding = 0; encoding < 8; encoding++) {
+#ifdef VERBOSE
+        printf("[INITIAL] compressing with encoding %d\n", encoding);
+#endif
+        is_compressed = bdi_ze_compressing_unit(original, &compressed, &tag_overhead, encoding);
+        if (is_compressed) break;
+    }
+
+    result.compressed = compressed;
+    result.tag_overhead = tag_overhead;
+
+    if (is_compressed == FALSE) {
+        remove_memory_chunk(compressed);
+        result.compressed = copy_memory_chunk(original);
+        result.tag_overhead.valid_bitwidth = 0;
+    }
+
+    return result;
+}
+
+Bool bdi_ze_compressing_unit(CacheLine original, CacheLine *compressed, MetaData *tag_overhead, int encoding) {
+    ValueBuffer base, buffer, delta, mask;
+    int k, d;
+    int compressed_siz = 0;
+    Bool initial, flag = TRUE;
+    MetaData zero_base_encoding;
+    int zero_base_encoding_siz;
+
+    // 0. Select mode by given encoding (MUX)
+    switch (encoding) {
+    case 0:  // Zero values
+#ifdef VERBOSE
+        printf("Zeros compression (encoding: %d)\n", encoding);
+#endif
+        for (int i = 0; i < original.size; i++) {
+#ifdef VERBOSE
+            printf("[ITER %2d] base: 0x%02x  buffer: 0x%02x\n", i, 0, original.body[i]);
+#endif
+            if (original.body[i] != 0) {
+#ifdef VERBOSE
+                printf("iteration terminated (not compressible)\n");
+#endif
+                return FALSE;
+            }
+        }
+#ifdef VERBOSE
+        printf("compression completed\n");
+#endif
+        compressed->size = 1;
+        set_value_bitwise(tag_overhead->body, 0, 0, 4);
+        set_value_bitwise(tag_overhead->body, 1, 4, 7);
+        return TRUE;
+    
+    case 1:  // Repeated values
+#ifdef VERBOSE
+        printf("Repeated values compression (encoding: %d)\n", encoding);
+#endif
+        base = get_value(original.body, 0, 8);
+        for (int i = 0; i < original.size; i += 8) {
+#ifdef VERBOSE
+            printf("[ITER %2d] base: 0x%016llx  buffer: 0x%016llx\n", i, base, get_value(original.body, i, 8));
+#endif
+            if (get_value(original.body, i, 8) != base) {
+#ifdef VERBOSE
+                printf("iteration terminated (not compressible)\n");
+#endif
+                return FALSE;
+            }
+        }
+#ifdef VERBOSE
+        printf("compression completed\n");
+#endif
+        set_value(compressed->body, base, 0, 8);
+        set_value_bitwise(tag_overhead->body, 1, 0, 4);
+        set_value_bitwise(tag_overhead->body, 1, 4, 7);
+        compressed->size = 8;
+        tag_overhead->size = 11;
+        
+        return TRUE;
+
+    case 2:  // Base8-delta1
+        k = 8; 
+        d = 1;
+        break;
+    
+    case 3:  // Base8-delta2
+        k = 4; 
+        d = 1;
+        break;
+
+    case 4:  // Base8-delta4
+        k = 2; 
+        d = 1;
+        break;
+
+    case 5:  // Base4-delta1
+        k = 8; 
+        d = 2;
+        break;
+
+    case 6:  // Base4-delta2
+        k = 4; 
+        d = 2;
+        break;
+    
+    case 7:  // Base2-delta1
+        k = 8; 
+        d = 4;
+        break;
+    
+    default:
+        k = 8; 
+        d = 1;
+        break;
+    }
+
+#ifdef VERBOSE
+    printf("Base%d-Delta%d (encoding: %d)\n", k, d, encoding);
+#endif
+
+    zero_base_encoding_siz = ceil((double)original.size / k);
+    zero_base_encoding = make_memory_chunk(zero_base_encoding_siz, 0);
+    compressed_siz = zero_base_encoding_siz;
+
+    ValueBuffer byte_mask = 0x00;
+    if (d >= 1) byte_mask += 0xff;
+    if (d >= 2) byte_mask += 0xff00;
+    if (d >= 4) byte_mask += 0xffff0000;
+
+    base = get_value(original.body, 0, k);
+    set_value(compressed->body, base, compressed_siz, k);
+    compressed_siz += k;
+
+    for (int i = k; i < original.size; i += k) {
+        buffer = get_value(original.body, i, k);
+#ifdef VERBOSE
+        printf("[ITER %2d] base: 0x%016llx  buffer: 0x%016llx\n", i/k, base, buffer);
+#endif
+
+        if (buffer == 0x00) {
+#ifdef VERBOSE
+            printf("zero buffer encoded\n");
+#endif
+            set_value_bitwise(zero_base_encoding.body, 0, i / k, 1);
+            continue;
+        } else {
+            set_value_bitwise(zero_base_encoding.body, 1, i / k, 1);
+        }
+
+        delta = buffer - base;
+#ifdef VERBOSE
+        printf("delta: 0x%016llx\n", delta);
+#endif
+
+        if (delta != SIGNEX(delta & byte_mask, (d * BYTE_BITWIDTH) - 1)) {
+#ifdef VERBOSE
+            printf("compression failed (sign extension failure)\n");
+#endif
+            return FALSE;
+        }
+
+        set_value(compressed->body, delta, compressed_siz, d);
+        compressed_siz += d;
+    }
+
+#ifdef VERBOSE
+    printf("compression succeed\n");
+#endif
+
+    compressed->size = compressed_siz;
+    set_value_bitwise(tag_overhead->body, encoding, 0, 4);
+    set_value_bitwise(tag_overhead->body, ceil((double)compressed_siz / 8), 4, 7);
+
+    return TRUE;
+}  

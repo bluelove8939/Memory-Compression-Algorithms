@@ -9,7 +9,7 @@
 #include <math.h>
 
 // Verbose parameter
-#define VERBOSE  // Comment this line not to display debug messages
+// #define VERBOSE  // Comment this line not to display debug messages
 
 // Parameters for cache line size
 #define BYTE_BITWIDTH  8
@@ -105,5 +105,13 @@ CompressionResult bdi_zr_compression(CacheLine original);                       
 DecompressionResult bdi_zr_decompression(CacheLine compressed, MetaData tag_overhead, int original_size);                                 // BDI decompression algorithm with zeros run detection
 Bool bdi_zr_compressing_unit(CacheLine original, CacheLine *compressed, MemoryChunk *shifting, MemoryChunk *tag_overhead, int encoding);  // Compressing Unit (CU)
 MemoryChunk bdi_zr_detector(CacheLine original, int encoding);                                                                            // Zeros run detector
+
+// Other algorithms on test
+CompressionResult zero_vec_compression(CacheLine original);   // Zero vector compression algorithm
+CompressionResult zeros_run_compression(CacheLine original);  // Zeros Run Compression algorithm
+
+// Functions for BDI algorithm with zeros encoding
+CompressionResult bdi_ze_compression(CacheLine original);                                                        // BDI compression algorithm with zero base encoding
+Bool bdi_ze_compressing_unit(CacheLine original, CacheLine *compressed, MetaData *tag_overhead, int encoding);   // Compressing Unit (CU)
 
 #endif

@@ -28,8 +28,10 @@ CompressionResult bdi_zv_compression(CacheLine original) {
 
 
 Bool bdi_zv_compressing_unit(CacheLine original, CacheLine *compressed, MetaData *tag_overhead, int encoding) {
+    MetaData target_bytearr = make_memory_chunk(original.size, 0);
     ValueBuffer base, buffer, delta, mask;
     int k, d, compressed_size;
+    Bool flag;
 
     switch (encoding) {
     case 0:
@@ -96,5 +98,49 @@ Bool bdi_zv_compressing_unit(CacheLine original, CacheLine *compressed, MetaData
         break;
     }
 
-    
+    int target_offset = 0;
+
+    for (int i = 0; i < original.size; i++) {
+        if (original.body[i] == 0) {
+            set_value_bitwise(compressed->body, 1, i, 1);
+        } else {
+            set_value(target_bytearr.body, original.body[i], target_offset, 1);
+            target_offset += 1;
+        }
+    }
+
+    compressed_size += ceil((double)original.size / BYTE_BITWIDTH);
+
+    if (target_offset < (k + d)) {
+        for (int i = 0; i < target_offset; i++) {
+            set_value(compressed->body, target_bytearr.body[i], i, 1);
+        }
+        compressed->size = compressed_size + target_offset;
+        compressed->valid_bitwidth = (compressed_size + target_offset) * BYTE_BITWIDTH;
+        return TRUE;
+    }
+
+    if (d >= 1) mask += 0xff;
+    if (d >= 2) mask += 0xff00;
+    if (d >= 4) mask += 0xffff0000;
+
+    base = get_value(target_bytearr.body, 0, k);
+
+    for (int i = 1; i < ceil((double)target_offset / k); i++) {
+        buffer = get_value(target_bytearr.body, i * k, k);
+        delta = buffer - base;
+
+        if (delta != SIGNEX(delta & mask, (d * BYTE_BITWIDTH) - 1)) {
+            remove_memory_chunk(target_bytearr);
+            compressed->size = original.size;
+            compressed->valid_bitwidth = original.valid_bitwidth;
+            return FALSE;
+        }
+
+        set_value(compressed->body, delta, compressed_size, d);
+        compressed_size += d;
+    }
+
+    remove_memory_chunk(target_bytearr);
+    return TRUE;
 }

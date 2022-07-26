@@ -713,6 +713,7 @@ CompressionResult fpc_compression(CacheLine original) {
         printf("compression failed (compressed size: %dBytes)\n", compressed_size);
 #endif
         result.compressed = copy_memory_chunk(original);
+        printf("%p  %p\n", result.compressed, result.original);
         result.is_compressed = FALSE;
     }
 
@@ -891,7 +892,6 @@ CompressionResult bdi_twobase_compression(CacheLine original) {
     MetaData tag_overhead = make_memory_chunk(2, 0);  // 2Bytes of tag overhead with its valid bitwidth of 11bits
     CacheLine compressed = make_memory_chunk(original.size, 0);  // initialize compressed cacheline with the size of original cacheline
     Bool is_compressed;
-    printf("debugging\n");
 
 #ifdef VERBOSE
     printf("Compressing with BDI algorithm with two bases...\n");

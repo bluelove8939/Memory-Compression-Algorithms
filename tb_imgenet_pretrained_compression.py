@@ -70,7 +70,7 @@ if __name__ == '__main__':
         os.makedirs(save_extraction_dir, exist_ok=True)
 
         extractor_module.target_model = model
-        extractor_module.output_modelname = save_modelname
+        extractor_module.output_modelname = full_modelname
         extractor_module.reset()
         extractor_module.add_param_trace(weight_trace)  # add weight trace
         extractor_module.add_param_trace(bias_trace)    # add bias trace

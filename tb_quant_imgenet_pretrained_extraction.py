@@ -86,7 +86,7 @@ if __name__ == '__main__':
         optimizer = optim.Adam(model.parameters(), lr=lr)
         loss_fn = nn.CrossEntropyLoss().to(device)
         qmodule = QuantizationModule(train_loader, loss_fn=loss_fn, optimizer=optimizer)
-        quant_model = qmodule.quantize(model, verbose=1, device=device)
+        quant_model = qmodule.quantize(model, verbose=1, device='cpu')
         torch.save(quant_model.state_dict(), save_fullpath)
 
         save_extraction_dir = os.path.join(os.curdir, 'extractions_quant', full_modelname)

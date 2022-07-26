@@ -66,10 +66,10 @@ if __name__ == '__main__':
     extractor_module = ModelExtractor()
     extracted_resultfiles = []
 
-    print("compiling compression algorithm testbench")
-    print("target output file: tb_csv")
-    os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
-    print("compilation completed\n")
+    # print("compiling compression algorithm testbench")
+    # print("target output file: tb_csv")
+    # os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
+    # print("compilation completed\n")
 
     for model_type, model_config in imagenet_pretrained.items():
         full_modelname = f"{model_type}_Imagenet"
@@ -97,12 +97,12 @@ if __name__ == '__main__':
         extractor_module.extract_params()                           # extract paramters
         extractor_module.save_params(savepath=save_extraction_dir)  # save extracted parameters
 
-        print(f"extracting '{full_modelname}' completed")
-        print(f"generating comparison test results")
-
-        filelist_filepath = os.path.join(save_extraction_dir, "filelist.txt")
-        comp_result_filepath = os.path.join(save_extraction_dir, "comparison_results.csv")
-        os.system(f'./tb_csv {filelist_filepath} {comp_args.csize} {comp_args.maxiter} {comp_result_filepath}')
-        extracted_resultfiles.append(comp_result_filepath)
-
-        print(f"compression algorithm comparison test completed\n")
+        # print(f"extracting '{full_modelname}' completed")
+        # print(f"generating comparison test results")
+        #
+        # filelist_filepath = os.path.join(save_extraction_dir, "filelist.txt")
+        # comp_result_filepath = os.path.join(save_extraction_dir, "comparison_results.csv")
+        # os.system(f'./tb_csv {filelist_filepath} {comp_args.csize} {comp_args.maxiter} {comp_result_filepath}')
+        # extracted_resultfiles.append(comp_result_filepath)
+        #
+        # print(f"compression algorithm comparison test completed\n")

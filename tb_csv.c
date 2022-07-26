@@ -76,7 +76,6 @@ int main(int argc, char const *argv[]) {
         original_size = 0;
 
         for (int i = 0; (i < filesize) && (iter < maxiter); i += chunksize) {
-            printf("debugging");
             chunk = file2memorychunk(datafilename, i, chunksize);
 #ifdef VERBOSE
             printf("original: ");
@@ -85,6 +84,7 @@ int main(int argc, char const *argv[]) {
 #endif
             for (int j = 0; j < ALGO_NUM; j++) {
                 result = algo_funcs[j](chunk);
+                printf("debugging\n");
                 algo_sizes[j] += result.compressed.size;
 #ifdef VERBOSE
                 printf("%8s size: %dBytes  result: ", algo_names[j], result.compressed.size);

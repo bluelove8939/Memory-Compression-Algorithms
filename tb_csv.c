@@ -84,7 +84,6 @@ int main(int argc, char const *argv[]) {
 #endif
             for (int j = 0; j < ALGO_NUM; j++) {
                 result = algo_funcs[j](chunk);
-                printf("algo cnt flag\n");
                 algo_sizes[j] += result.compressed.size;
 #ifdef VERBOSE
                 printf("%8s size: %dBytes  result: ", algo_names[j], result.compressed.size);
@@ -92,6 +91,7 @@ int main(int argc, char const *argv[]) {
                 printf("\n");
 #endif
                 remove_compression_result(result);
+                printf("algo cnt flag\n");
             }
 #ifdef VERBOSE
             printf("\n");

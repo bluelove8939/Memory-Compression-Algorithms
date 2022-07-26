@@ -93,13 +93,14 @@ void remove_memory_chunk(MemoryChunk chunk) {
 
 void remove_compression_result(CompressionResult result) {
     remove_memory_chunk(result.compressed);
-    printf("debugging\n");
     remove_memory_chunk(result.tag_overhead);
-    printf("debugging\n");
+    result.compressed = NULL;
+    result.tag_overhead = NULL;
 }
 
 void remove_decompression_result(DecompressionResult result) {
     remove_memory_chunk(result.original);
+    result.original = NULL;
 }
 
 void print_memory_chunk(MemoryChunk chunk) {

@@ -75,6 +75,8 @@ int main(int argc, char const *argv[]) {
         iter = 0;
         original_size = 0;
 
+        printf("debugging\n");
+
         for (int i = 0; (i < filesize) && (iter < maxiter); i += chunksize) {
             chunk = file2memorychunk(datafilename, i, chunksize);
 #ifdef VERBOSE
@@ -103,6 +105,8 @@ int main(int argc, char const *argv[]) {
             iter += 1;
             original_size += chunksize;
         }
+
+        printf("debugging\n");
 
         printf("\ncompression ratio: ");
         fprintf(logfilefp, "%s", datafilename);

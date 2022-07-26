@@ -67,7 +67,9 @@ int main(int argc, char const *argv[]) {
         filesize = ftell(fp);
         fclose(fp);
 
+        printf("d1\n");
         printf("Reading %s (filesize: %dBytes)\n", datafilename, filesize);
+        printf("d2\n");
 
         for (int i = 0; i < ALGO_NUM; i++)
             algo_sizes[i] = 0;
@@ -97,9 +99,7 @@ int main(int argc, char const *argv[]) {
             printf("\n");
 #endif
 #ifndef VERBOSE
-            printf("d1\n");
             printf("\r[ITER %2d] offset: %dBytes  size: %dBytes", iter+1, i, chunksize);
-            printf("d2\n");
 #endif
 
             remove_memory_chunk(chunk);

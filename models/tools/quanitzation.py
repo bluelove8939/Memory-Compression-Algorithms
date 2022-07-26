@@ -1,11 +1,8 @@
-import os
 import copy
 import torch
 import torch.quantization.quantize_fx as quantize_fx
-from torch.fx import Interpreter
 
-from tools.progressbar import progressbar
-from tools.training import train, test
+from models.tools.progressbar import progressbar
 
 
 class QuantizationModule(object):

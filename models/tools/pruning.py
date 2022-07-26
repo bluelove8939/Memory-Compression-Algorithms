@@ -1,8 +1,7 @@
 import torch
 import torch.nn.utils.prune as prune
 
-from tools.progressbar import progressbar
-from tools.training import train, test
+from models.tools.training import train, test
 
 
 class PruneModule(object):

@@ -1,8 +1,7 @@
 import sys
 import torch
 import torch.distributed as dist
-from enum import Enum
-from tools.progressbar import progressbar
+from models.tools.progressbar import progressbar
 
 
 # device = "cuda" if torch.cuda.is_available() else "cpu"

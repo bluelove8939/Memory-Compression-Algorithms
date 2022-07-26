@@ -713,7 +713,9 @@ CompressionResult fpc_compression(CacheLine original) {
         printf("compression failed (compressed size: %dBytes)\n", compressed_size);
 #endif
         result.compressed = copy_memory_chunk(original);
-        printf("%p  %p, %s\n", result.compressed, result.original, print_memory_chunk(result.compressed));
+        printf("%p  %p\n", result.compressed, result.original);
+        print_memory_chunk(result.compressed);
+        printf("\n")
         result.is_compressed = FALSE;
     }
 

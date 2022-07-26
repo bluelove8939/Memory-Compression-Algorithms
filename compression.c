@@ -1545,9 +1545,9 @@ CompressionResult zero_vec_compression(CacheLine original) {
 #endif
         result.is_compressed = FALSE;
         result.compressed = compressed;
-        // result.tag_overhead = make_memory_chunk(1, 0);
-        // result.tag_overhead.size = 0;
-        // result.tag_overhead.valid_bitwidth = 0;
+        result.tag_overhead = make_memory_chunk(1, 0);
+        result.tag_overhead.size = 0;
+        result.tag_overhead.valid_bitwidth = 0;
 
         return result;
     }

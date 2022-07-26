@@ -99,7 +99,6 @@ int main(int argc, char const *argv[]) {
             printf("\r[ITER %2d] offset: %dBytes  size: %dBytes", iter+1, i, chunksize);
 #endif
             remove_memory_chunk(chunk);
-            printf("debugging\n");
             iter += 1;
             original_size += chunksize;
         }

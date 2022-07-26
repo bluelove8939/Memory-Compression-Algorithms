@@ -89,7 +89,6 @@ MemoryChunk copy_memory_chunk(MemoryChunk target) {
 
 void remove_memory_chunk(MemoryChunk chunk) {
     free(chunk.body);
-    chunk.body = NULL;
 }
 
 void remove_compression_result(CompressionResult result) {

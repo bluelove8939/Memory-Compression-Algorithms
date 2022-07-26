@@ -20,7 +20,7 @@ def contains_trace(substring):
 
 
 class ModelExtractor(object):
-    def __init__(self, target_model: torch.nn.Module, output_modelname: str='model', device: str=AUTO):
+    def __init__(self, target_model: torch.nn.Module=None, output_modelname: str='model', device: str=AUTO):
         self.target_model = target_model          # target model (torch.nn.Module)
         self.output_modelname = output_modelname  # name of saved model
         self._params = {}      # extracted parameters
@@ -31,6 +31,12 @@ class ModelExtractor(object):
 
         if self.device == AUTO:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    def reset(self):
+        self._params = {}
+        self._activation = {}
+        self._hook_names = []
+        self._traces = []
 
     def add_param_trace(self, trace: Callable):
         if trace not in self._traces:

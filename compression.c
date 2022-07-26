@@ -891,6 +891,7 @@ CompressionResult bdi_twobase_compression(CacheLine original) {
     MetaData tag_overhead = make_memory_chunk(2, 0);  // 2Bytes of tag overhead with its valid bitwidth of 11bits
     CacheLine compressed = make_memory_chunk(original.size, 0);  // initialize compressed cacheline with the size of original cacheline
     Bool is_compressed;
+    printf("debugging\n");
 
 #ifdef VERBOSE
     printf("Compressing with BDI algorithm with two bases...\n");
@@ -900,7 +901,6 @@ CompressionResult bdi_twobase_compression(CacheLine original) {
     result.original = original;
 
     for (int encoding = 0; encoding < 16; encoding++) {
-        printf("debugging\n");
         is_compressed = bdi_twobase_compressing_unit(original, &compressed, &tag_overhead, encoding);
         if (is_compressed == TRUE) {
             result.is_compressed = TRUE;

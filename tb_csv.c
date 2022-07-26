@@ -100,13 +100,11 @@ int main(int argc, char const *argv[]) {
 #ifndef VERBOSE
             printf("\r[ITER %2d] offset: %dBytes  size: %dBytes", iter+1, i, chunksize);
 #endif
-
+            printf("debugging\n");
             remove_memory_chunk(chunk);
             iter += 1;
             original_size += chunksize;
         }
-
-        printf("debugging\n");
 
         printf("\ncompression ratio: ");
         fprintf(logfilefp, "%s", datafilename);

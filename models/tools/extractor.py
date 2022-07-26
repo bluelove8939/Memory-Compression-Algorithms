@@ -20,13 +20,14 @@ def contains_trace(substring):
 
 
 class ModelExtractor(object):
-    def __init__(self, target_model: torch.nn.Module=None, output_modelname: str='model', device: str=AUTO):
+    def __init__(self, target_model: torch.nn.Module=None, output_modelname: str='model', device: str=AUTO, verbose=False):
         self.target_model = target_model          # target model (torch.nn.Module)
         self.output_modelname = output_modelname  # name of saved model
         self._params = {}      # extracted parameters
         self._activation = {}  # extracted output activations
         self._hook_names = []  # name of registered hooks
         self._traces = []      # parameter traces
+        self._verbose = verbose
         self.device = device   # defined target device (mainly 'cpu' or 'cuda')
 
         if self.device == AUTO:
@@ -59,7 +60,8 @@ class ModelExtractor(object):
             while f"{name}_output{oidx}" in self._activation.keys(): oidx += 1
             save_output_name = f"{name}_output{oidx}"
             self._activation[save_output_name] = layer_output.detach()
-            print(f'extracting {save_output_name} (type: {self._activation[save_output_name].type()})')
+            if self._verbose:
+                print(f'extracting {save_output_name} (type: {self._activation[save_output_name].type()})')
 
         return hook
 
@@ -80,7 +82,8 @@ class ModelExtractor(object):
                 if trace(param_name):
                     parsed_name = f"{self.output_modelname}_{param_name.replace('.', '_')}"
                     try:
-                        print(f"extracting {parsed_name}")
+                        if self._verbose:
+                            print(f"extracting {parsed_name}")
                         self._params[parsed_name] = self.target_model.state_dict()[param_name].detach()
                     except:
                         print(f"error occurred on extracting {parsed_name}")
@@ -114,13 +117,14 @@ class ModelExtractor(object):
 
 
 class QuantModelExtractor(Interpreter):
-    def __init__(self, target_model, output_modelname='model'):
+    def __init__(self, target_model, output_modelname='model', verbose=False):
         super(QuantModelExtractor, self).__init__(target_model)
         self.target_model = target_model          # target model (fx graph model)
         self.output_modelname = output_modelname  # name of saved model
         self._params = {}      # extracted parameters
         self._activation = {}  # extracted output activations
         self._traces = []      # parameter traces
+        self._verbose = verbose
         self.device = 'cpu'
 
     def add_param_trace(self, trace: Callable):
@@ -140,7 +144,8 @@ class QuantModelExtractor(Interpreter):
                     idx += 1
                     save_output_name = f"{self.output_modelname}_{target}_output{idx}"
 
-                print(f'extracting {save_output_name}')
+                if self._verbose:
+                    print(f'extracting {save_output_name}')
                 self.features[save_output_name] = super().call_module(target, *args, **kwargs).int_repr().detach()
         return super().call_module(target, *args, **kwargs)
 
@@ -161,7 +166,8 @@ class QuantModelExtractor(Interpreter):
                 if trace(param_name):
                     parsed_name = f"{self.output_modelname}_{param_name.replace('.', '_')}"
                     try:
-                        print(f"extracting {parsed_name}")
+                        if self._verbose:
+                            print(f"extracting {parsed_name}")
                         self._params[parsed_name] = self.target_model.state_dict()[param_name].detach()
                     except:
                         print(f"error occurred on extracting {parsed_name}")

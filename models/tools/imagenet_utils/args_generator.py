@@ -66,7 +66,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 # parser.add_argument('--prune', default=0.0, type=float)
 # parser.add_argument('--prune-step', default=10, type=int)
 parser.add_argument('--do-not-calibrate', action="store_true", default=False)
-args = parser.parse_known_args()
+args, _ = parser.parse_known_args()
 
 if args.seed is not None:
     random.seed(args.seed)

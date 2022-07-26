@@ -97,14 +97,16 @@ int main(int argc, char const *argv[]) {
             printf("\n");
 #endif
 #ifndef VERBOSE
+            printf("d1\n");
             printf("\r[ITER %2d] offset: %dBytes  size: %dBytes", iter+1, i, chunksize);
+            printf("d2\n");
 #endif
 
             remove_memory_chunk(chunk);
             iter += 1;
             original_size += chunksize;
         }
-        
+
         printf("\ncompression ratio: ");
         fprintf(logfilefp, "%s", datafilename);
         for (int i = 0; i < ALGO_NUM; i++) {

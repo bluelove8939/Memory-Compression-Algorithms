@@ -82,7 +82,7 @@ int main(int argc, char const *argv[]) {
             print_memory_chunk(chunk);
             printf("\n");
 #endif
-            print("debugging\n");
+            printf("debugging\n");
             for (int j = 0; j < ALGO_NUM; j++) {
                 result = algo_funcs[j](chunk);
                 algo_sizes[j] += result.compressed.size;
@@ -93,7 +93,7 @@ int main(int argc, char const *argv[]) {
 #endif
                 remove_compression_result(result);
             }
-            print("debugging\n");
+            printf("debugging\n");
 #ifdef VERBOSE
             printf("\n");
 #endif

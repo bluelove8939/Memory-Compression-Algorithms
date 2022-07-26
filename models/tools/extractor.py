@@ -7,6 +7,18 @@ from torch.fx import Interpreter
 AUTO = 'auto'
 
 
+def weight_trace(param_name):
+    return 'weight' in param_name
+
+def bias_trace(param_name):
+    return 'bias' in param_name
+
+def contains_trace(substring):
+    def tfunc(param_name):
+        return substring in param_name
+    return tfunc
+
+
 class ModelExtractor(object):
     def __init__(self, target_model: torch.nn.Module, output_modelname: str='model', device: str=AUTO):
         self.target_model = target_model          # target model (torch.nn.Module)

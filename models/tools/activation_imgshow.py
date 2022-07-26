@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 
 AUTO = 'auto'
+ALL = 'all'
 DONT_SAVE = 'dont_save'
 
 
@@ -28,9 +29,14 @@ class ActivationImgGenerator(object):
         else:
             print(f"Hook '{name}' already exists")
 
-    def remove_trace(self, name: str):
-        self._hook_handlers[name].remove()
-        del self._hook_handlers[name]
+    def remove_trace(self, name: str=ALL):
+        if name == ALL:
+            for key in self._hook_handlers.keys():
+                self._hook_handlers[key].remove()
+                del self._hook_handlers[key]
+        else:
+            self._hook_handlers[name].remove()
+            del self._hook_handlers[name]
 
     def show_activations(self, test_dataset, model: torch.nn.Module, img_savepath:str=DONT_SAVE):
         model.load_state_dict(torch.load(self.model_savepath))
@@ -42,8 +48,8 @@ class ActivationImgGenerator(object):
         model(data.to(self.device))
 
         rgrid, cgrid = 0, 0
-        for key in activation.keys():
-            rgrid = max(rgrid, activation[key].squeeze().size(0))
+        for key in self._activation.keys():
+            rgrid = max(rgrid, self._activation[key].squeeze().size(0))
             cgrid += 1
         print(f"rgrid: {rgrid}, cgrid: {cgrid}")
 
@@ -51,8 +57,8 @@ class ActivationImgGenerator(object):
         fig.suptitle("Intermediate Activation Images")
 
         ridx, cidx = 0, 0
-        for key in activation.keys():
-            act = activation[key].squeeze()
+        for key in self._activation.keys():
+            act = self._activation[key].squeeze()
             for ridx in range(rgrid):
                 if ridx < act.size(0):
                     axs[cidx, ridx].imshow(act[ridx].to('cpu'))

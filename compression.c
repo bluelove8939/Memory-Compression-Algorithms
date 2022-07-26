@@ -715,7 +715,7 @@ CompressionResult fpc_compression(CacheLine original) {
         result.compressed = copy_memory_chunk(original);
         printf("%p  %p\n", result.compressed, result.original);
         print_memory_chunk(result.compressed);
-        printf("\n")
+        printf("\n");
         result.is_compressed = FALSE;
     }
 

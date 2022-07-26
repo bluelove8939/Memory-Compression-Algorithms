@@ -10,9 +10,10 @@ import torchvision
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
-from tools.imagenet_utils.args_generator import args
-from tools.imagenet_utils.training import validate
-from tools.activation_imgshow import ActivationImgGenerator
+from models.tools.imagenet_utils.args_generator import args
+from models.tools.imagenet_utils.training import validate
+from models.tools.activation_imgshow import ActivationImgGenerator
+from models.model_presets import imagenet_pretrained
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -56,35 +57,13 @@ test_loader = torch.utils.data.DataLoader(
     num_workers=args.workers, pin_memory=True, sampler=val_sampler)
 
 
-# Model configuration
-model_type = 'ResNet50'
-dataset_type = 'Imagenet'
-weight_preset = torchvision.models.ResNet50_Weights.IMAGENET1K_V1
-model = torchvision.models.resnet50(weights=weight_preset).to(device)
-
-lr = 0.0001
-optimizer = optim.Adam(model.parameters(), lr=lr)
-loss_fn = nn.CrossEntropyLoss().to(device)
-
-
-save_dirpath = os.path.join(os.curdir, 'model_output')
-if not os.path.exists(save_dirpath):
-    os.makedirs(save_dirpath)
-save_modelname = f"{model_type}_{dataset_type}.pth"
-save_fullpath = os.path.join(save_dirpath, save_modelname)
-
-
 if __name__ == '__main__':
-    validate(test_loader, model, loss_fn, args)
-    torch.save(model.state_dict(), save_fullpath)
+    save_dirpath = os.path.join(os.curdir, 'model_output')
+    os.makedirs(save_dirpath, exist_ok=True)
 
-    img_dirname = os.path.join(os.curdir, 'activation_images')
-    os.makedirs(img_dirname, exist_ok=True)
-    img_filename = f"{model_type}_{dataset_type}_activation.png"
-    img_generator = ActivationImgGenerator(save_fullpath, device=device)
-    img_generator.add_trace(model.conv1, name='conv1', channel_size=9)
-    img_generator.add_trace(model.layer1, name='layer1', channel_size=9)
-    img_generator.add_trace(model.layer2, name='layer2', channel_size=9)
-    img_generator.add_trace(model.layer3, name='layer3', channel_size=9)
-    img_generator.add_trace(model.layer4, name='layer4', channel_size=9)
-    img_generator.show_activations(test_dataset, model, img_savepath=os.path.join(img_dirname, img_filename))
+    for model_type, model_config in imagenet_pretrained.items():
+        save_modelname = f"{model_type}_Imagenet.pth"
+        save_fullpath = os.path.join(save_dirpath, save_modelname)
+
+        model = model_config.generate()
+        torch.save(model.state_dict(), save_fullpath)

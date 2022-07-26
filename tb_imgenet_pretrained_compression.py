@@ -15,7 +15,7 @@ from models.tools.extractor import ModelExtractor, weight_trace, bias_trace
 parser = argparse.ArgumentParser(description='Comparison Test Configs')
 parser.add_argument('-cs', '--csize', default=64, help='Cache line size (int)', dest='csize')
 parser.add_argument('-mi', '--maxiter', default=5000, help='Max iteration of the file fetch (int)', dest='maxiter')
-comp_args = parser.parse_args()
+comp_args = parser.parse_known_args()
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"

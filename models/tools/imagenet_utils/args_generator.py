@@ -63,10 +63,10 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'N processes per node, which has N GPUs. This is the '
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
-parser.add_argument('--prune', default=0.0, type=float)
-parser.add_argument('--prune-step', default=10, type=int)
+# parser.add_argument('--prune', default=0.0, type=float)
+# parser.add_argument('--prune-step', default=10, type=int)
 parser.add_argument('--do-not-calibrate', action="store_true", default=False)
-args = parser.parse_args()
+args = parser.parse_known_args()
 
 if args.seed is not None:
     random.seed(args.seed)

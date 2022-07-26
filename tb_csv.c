@@ -76,6 +76,7 @@ int main(int argc, char const *argv[]) {
         original_size = 0;
 
         for (int i = 0; (i < filesize) && (iter < maxiter); i += chunksize) {
+            printf("debugging");
             chunk = file2memorychunk(datafilename, i, chunksize);
 #ifdef VERBOSE
             printf("original: ");

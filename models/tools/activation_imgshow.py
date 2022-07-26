@@ -51,7 +51,6 @@ class ActivationImgGenerator(object):
         for key in self._activation.keys():
             rgrid = max(rgrid, self._activation[key].squeeze().size(0))
             cgrid += 1
-        print(f"rgrid: {rgrid}, cgrid: {cgrid}")
 
         fig, axs = plt.subplots(cgrid, rgrid, figsize=(4 * rgrid, 4 * cgrid), gridspec_kw={'width_ratios': [1] * rgrid})
         fig.suptitle("Intermediate Activation Images")

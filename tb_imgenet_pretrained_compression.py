@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     print("compiling compression algorithm testbench")
     print("target output file: tb_csv")
-    os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c")
+    os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm")
     print("compilation completed\n")
 
     for model_type, model_config in imagenet_pretrained.items():

@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
         filelist_filepath = os.path.join(save_extraction_dir, "filelist.txt")
         comp_result_filepath = os.path.join(save_extraction_dir, "comparison_results.csv")
-        os.system(f'./tb_csv "{filelist_filepath}" {comp_args.csize} {comp_args.maxiter} "{comp_result_filepath}"')
+        os.system(f'./tb_csv {filelist_filepath} {comp_args.csize} {comp_args.maxiter} {comp_result_filepath}')
         extracted_resultfiles.append(comp_result_filepath)
 
         print(f"compression algorithm comparison test completed\n")

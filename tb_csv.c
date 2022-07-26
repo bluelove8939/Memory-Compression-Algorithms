@@ -95,21 +95,21 @@ int main(int argc, char const *argv[]) {
 #ifdef VERBOSE
             printf("\n");
 #endif
-#ifndef VERBOSE
-            printf("\r[ITER %2d] offset: %dBytes  size: %dBytes", iter+1, i, chunksize);
-#endif
+// #ifndef VERBOSE
+//             printf("\r[ITER %2d] offset: %dBytes  size: %dBytes", iter+1, i, chunksize);
+// #endif
             remove_memory_chunk(chunk);
             iter += 1;
             original_size += chunksize;
         }
 
-        printf("\ncompression ratio: ");
+        printf("compression ratio: ");
         fprintf(logfilefp, "%s", datafilename);
         for (int i = 0; i < ALGO_NUM; i++) {
             printf("%.4f(%s) ", (double)original_size / algo_sizes[i], algo_names[i]);
             fprintf(logfilefp, ",%.4f", (double)original_size / algo_sizes[i]);
         }
-        printf("\n\n");
+        printf("\n");
         fprintf(logfilefp, "\n");
     }
 

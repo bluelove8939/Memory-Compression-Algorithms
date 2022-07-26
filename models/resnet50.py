@@ -59,7 +59,8 @@ test_loader = torch.utils.data.DataLoader(
 # Model configuration
 model_type = 'ResNet50'
 dataset_type = 'Imagenet'
-model = torchvision.models.resnet50(pretrained=True).to(device)
+weight_preset = torchvision.models.ResNet50_Weights.DEFAULT
+model = torchvision.models.resnet50(weights=weight_preset).to(device)
 
 lr = 0.0001
 optimizer = optim.Adam(model.parameters(), lr=lr)

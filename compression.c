@@ -900,6 +900,7 @@ CompressionResult bdi_twobase_compression(CacheLine original) {
     result.original = original;
 
     for (int encoding = 0; encoding < 16; encoding++) {
+        printf("debugging\n");
         is_compressed = bdi_twobase_compressing_unit(original, &compressed, &tag_overhead, encoding);
         if (is_compressed == TRUE) {
             result.is_compressed = TRUE;

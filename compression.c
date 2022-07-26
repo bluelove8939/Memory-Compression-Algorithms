@@ -204,6 +204,7 @@ MemoryChunk file2memorychunk(char const *filename, int offset, int size) {
 #endif
 
     fclose(fp);
+    fp = NULL;
     return chunk;
 }
 

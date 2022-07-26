@@ -88,7 +88,9 @@ MemoryChunk copy_memory_chunk(MemoryChunk target) {
 }
 
 void remove_memory_chunk(MemoryChunk chunk) {
+    printf("debugging\n");
     free(chunk.body);
+    printf("debugging\n");
 }
 
 void remove_compression_result(CompressionResult result) {
@@ -713,9 +715,6 @@ CompressionResult fpc_compression(CacheLine original) {
         printf("compression failed (compressed size: %dBytes)\n", compressed_size);
 #endif
         result.compressed = copy_memory_chunk(original);
-        printf("%p  %p\n", result.compressed, result.original);
-        print_memory_chunk(result.compressed);
-        printf("\n");
         result.is_compressed = FALSE;
     }
 

@@ -78,6 +78,7 @@ if __name__ == '__main__':
     torch.save(model.state_dict(), save_fullpath)
 
     img_dirname = os.path.join(os.curdir, 'activation_images')
+    os.makedirs(img_dirname, exist_ok=True)
     img_filename = f"{model_type}_{dataset_type}_activation.png"
     img_generator = ActivationImgGenerator(save_fullpath, device=device)
     img_generator.add_trace(model.conv1, name='conv1', channel_size=9)

@@ -59,7 +59,7 @@ test_loader = torch.utils.data.DataLoader(
 # Model configuration
 model_type = 'ResNet50'
 dataset_type = 'Imagenet'
-weight_preset = torchvision.models.ResNet50_Weights.DEFAULT
+weight_preset = torchvision.models.ResNet50_Weights.IMAGENET1K_V1
 model = torchvision.models.resnet50(weights=weight_preset).to(device)
 
 lr = 0.0001

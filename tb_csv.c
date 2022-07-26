@@ -67,9 +67,7 @@ int main(int argc, char const *argv[]) {
         filesize = ftell(fp);
         fclose(fp);
 
-        printf("d1\n");
         printf("Reading %s (filesize: %dBytes)\n", datafilename, filesize);
-        printf("d2\n");
 
         for (int i = 0; i < ALGO_NUM; i++)
             algo_sizes[i] = 0;
@@ -78,7 +76,9 @@ int main(int argc, char const *argv[]) {
         original_size = 0;
 
         for (int i = 0; (i < filesize) && (iter < maxiter); i += chunksize) {
+            printf("d1\n");
             chunk = file2memorychunk(datafilename, i, chunksize);
+            printf("d2\n");
 #ifdef VERBOSE
             printf("original: ");
             print_memory_chunk(chunk);

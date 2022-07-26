@@ -93,9 +93,7 @@ void remove_memory_chunk(MemoryChunk chunk) {
 
 void remove_compression_result(CompressionResult result) {
     remove_memory_chunk(result.compressed);
-    printf("debugging\n");
     remove_memory_chunk(result.tag_overhead);
-    printf("debugging\n");
 }
 
 void remove_decompression_result(DecompressionResult result) {
@@ -716,6 +714,8 @@ CompressionResult fpc_compression(CacheLine original) {
 #endif
         result.compressed = copy_memory_chunk(original);
         result.is_compressed = FALSE;
+        tag_overhead.valid_bitwidth = 0;
+        result.tag_overhead = tag_overhead;
     }
 
 #ifdef VERBOSE

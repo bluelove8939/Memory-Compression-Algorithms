@@ -229,6 +229,8 @@ CompressionResult bdi_compression(CacheLine original) {
     CacheLine compressed;
     ValueBuffer segment_num;
 
+    printf("debugging\n");
+
 #ifdef VERBOSE
     printf("Compressing with BDI algorithm...\n");
 #endif
@@ -257,6 +259,8 @@ CompressionResult bdi_compression(CacheLine original) {
     set_value_bitwise(tag_overhead.body, segment_num, 4, 7);
     tag_overhead.valid_bitwidth = 11;
     result.tag_overhead = tag_overhead;
+
+    printf("debugging\n");
     return result;
 }
 

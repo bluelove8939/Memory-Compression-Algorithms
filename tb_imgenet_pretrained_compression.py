@@ -66,7 +66,7 @@ if __name__ == '__main__':
         model = model_config.generate()
         torch.save(model.state_dict(), save_fullpath)
 
-        save_extraction_dir = os.path.join(os.path.abspath(os.curdir), 'extractions', full_modelname)
+        save_extraction_dir = os.path.join(os.curdir, 'extractions', full_modelname)
         os.makedirs(save_extraction_dir, exist_ok=True)
 
         extractor_module.target_model = model

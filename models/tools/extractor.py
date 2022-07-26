@@ -97,7 +97,7 @@ class ModelExtractor(object):
                 file.write(barr)
 
         with open(os.path.join(savepath, 'filelist.txt'), 'wt') as filelist:
-            filelist.write('\n'.join([os.path.join(savepath, layer_name) for layer_name in self._activation.keys()]))
+            filelist.write('\n'.join([os.path.join(savepath, layer_name) for layer_name in self._params.keys()]))
 
     def save_activation(self, savepath: str=AUTO):
         if savepath == AUTO:
@@ -178,7 +178,7 @@ class QuantModelExtractor(Interpreter):
                 file.write(barr)
 
         with open(os.path.join(savepath, 'filelist.txt'), 'wt') as filelist:
-            filelist.write('\n'.join([os.path.join(savepath, layer_name) for layer_name in self._activation.keys()]))
+            filelist.write('\n'.join([os.path.join(savepath, layer_name) for layer_name in self._params.keys()]))
 
     def save_activation(self, savepath: str=AUTO):
         if savepath == AUTO:

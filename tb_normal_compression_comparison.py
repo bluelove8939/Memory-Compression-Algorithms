@@ -10,7 +10,7 @@ comp_args, _ = parser.parse_known_args()
 
 tb_name = 'tb_csv.exe'
 if 'linux' in platform.platform().lower():
-    tb_name = 'tb_csv'
+    tb_name = './tb_csv'
 
 os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
 

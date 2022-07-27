@@ -12,10 +12,11 @@ tb_name = 'tb_csv.exe'
 if 'linux' in platform.platform().lower():
     tb_name = './tb_csv'
 
+print(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
 os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
 
 for model_name in os.listdir(os.path.join(os.curdir, 'extractions')):
     filelist_path = os.path.join(os.curdir, 'extractions', model_name, 'filelist.txt')
     result_path = os.path.join(os.curdir, 'extractions', model_name, 'comparison_results.csv')
-    print(f"\n{tb_name} {filelist_path} 64 5000 {result_path}")
+    print(f"\n{tb_name} {filelist_path} {comp_args.csize} {comp_args.maxiter} {result_path}")
     os.system(f"{tb_name} {filelist_path} {comp_args.csize} {comp_args.maxiter} {result_path}")

@@ -1,5 +1,7 @@
 import os
 import argparse
+import platform
+import subprocess
 
 import torch
 from torch.utils.data import DataLoader
@@ -66,10 +68,12 @@ if __name__ == '__main__':
     extractor_module = ModelExtractor()
     extracted_resultfiles = []
 
-    # print("compiling compression algorithm testbench")
-    # print("target output file: tb_csv")
-    # os.system(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
-    # print("compilation completed\n")
+    tb_name = 'tb_csv.exe'
+    if 'linux' in platform.platform().lower():
+        tb_name = './tb_csv'
+
+    print(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0")
+    subprocess.run(f"gcc -o tb_csv ./tb_csv.c ./compression.c ./bdi_zerovec.c -lm -Wformat=0", shell=True, check=True)
 
     for model_type, model_config in imagenet_pretrained.items():
         full_modelname = f"{model_type}_Imagenet"
@@ -97,12 +101,16 @@ if __name__ == '__main__':
         extractor_module.extract_params()                           # extract paramters
         extractor_module.save_params(savepath=save_extraction_dir)  # save extracted parameters
 
-        # print(f"extracting '{full_modelname}' completed")
-        # print(f"generating comparison test results")
-        #
-        # filelist_filepath = os.path.join(save_extraction_dir, "filelist.txt")
-        # comp_result_filepath = os.path.join(save_extraction_dir, "comparison_results.csv")
-        # os.system(f'./tb_csv {filelist_filepath} {comp_args.csize} {comp_args.maxiter} {comp_result_filepath}')
-        # extracted_resultfiles.append(comp_result_filepath)
-        #
-        # print(f"compression algorithm comparison test completed\n")
+        print(f"extracting '{full_modelname}' completed")
+        print(f"generating comparison test results")
+
+        filelist_path = os.path.join(os.curdir, 'extractions', full_modelname, 'filelist.txt')
+        result_path = os.path.join(os.curdir, 'extractions', full_modelname, 'comparison_results.csv')
+        print(f"\n{tb_name} {filelist_path} {comp_args.csize} {comp_args.maxiter} {result_path}")
+        tb_result = subprocess.run(f"{tb_name} {filelist_path} {comp_args.csize} {comp_args.maxiter} {result_path}",
+                                   shell=True)
+
+        if tb_result.returncode != 0:
+            print('Error occurred on running compression algorithm testbench')
+        else:
+            print(f"compression algorithm comparison test completed\n")

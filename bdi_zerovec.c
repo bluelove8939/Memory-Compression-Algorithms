@@ -18,7 +18,7 @@ CompressionResult bdi_zv_compression(CacheLine original) {
         }
     }
 
-    result.compressed = original;
+    result.compressed = copy_memory_chunk(original);
     result.tag_overhead = tag_overhead;
     remove_memory_chunk(compressed);
     result.is_compressed = FALSE;
